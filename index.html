@@ -1,0 +1,2706 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Драг Рейсинг — Война Кланов</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05060f;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff}
+  #app{position:relative;width:100%;height:100%}
+  canvas#game{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+
+  .screen{position:absolute;top:0;right:0;bottom:0;left:0;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 40%,rgba(30,20,70,.9),rgba(3,4,10,.98));
+    z-index:20;padding:14px}
+  .screen.hidden{display:none}
+
+  .overlay{position:absolute;top:0;right:0;bottom:0;left:0;z-index:20;pointer-events:none}
+  .overlay.hidden{display:none}
+  .overlay > *{pointer-events:auto}
+
+  .panel{text-align:center;padding:34px 40px;border:1px solid rgba(120,160,255,.25);
+    border-radius:20px;background:rgba(12,16,34,.94);
+    box-shadow:0 0 60px rgba(60,110,255,.18);
+    max-width:94vw;width:100%}
+  .panel.wide{max-width:1000px;width:94vw;max-height:92vh;
+    display:flex;flex-direction:column;padding:24px 28px}
+
+  h2{font-size:clamp(20px,4vw,30px);letter-spacing:.1em;margin:0}
+  .sub{margin-top:8px;color:#8fa2c9;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+
+  .panel-head{display:flex;justify-content:space-between;align-items:center;
+    padding-bottom:14px;border-bottom:1px solid rgba(120,160,255,.15);flex:none}
+  .panel-foot{padding-top:14px;border-top:1px solid rgba(120,160,255,.15);
+    display:flex;justify-content:center;flex:none}
+
+  .money-chip{font-family:monospace;font-weight:800;font-size:18px;color:#ffd166;
+    background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.3);
+    border-radius:10px;padding:6px 16px}
+
+  button{cursor:pointer;font-family:inherit;font-weight:800;letter-spacing:.1em;
+    border:none;border-radius:12px;font-size:15px;padding:14px 30px;
+    background:linear-gradient(180deg,#3d7bff,#1c46c9);color:#fff;
+    box-shadow:0 6px 24px rgba(50,110,255,.4);transition:transform .12s,opacity .12s}
+  button:hover:not(:disabled){transform:translateY(-2px)}
+  button:active:not(:disabled){transform:translateY(0)}
+  button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+  button.ghost{background:rgba(80,110,180,.18);border:1px solid rgba(120,160,255,.3);
+    box-shadow:none;color:#cfe0ff}
+  button.ghost:hover{background:rgba(80,110,180,.3)}
+  button.primary{background:linear-gradient(180deg,#3d7bff,#1c46c9)}
+  button.big{padding:16px 52px;font-size:17px}
+
+  .btn-sm{padding:8px 14px;font-size:12px;border-radius:9px;letter-spacing:.06em;
+    background:linear-gradient(180deg,#3d7bff,#1c46c9);box-shadow:0 3px 12px rgba(50,110,255,.3)}
+  .btn-sm.buy{background:linear-gradient(180deg,#22c55e,#12813c)}
+  .btn-sm.gold{background:linear-gradient(180deg,#f0b429,#b45309)}
+
+  /* ХАБ */
+  .hub-top{position:absolute;top:16px;left:16px;right:16px;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .chip{background:rgba(10,14,30,.72);border:1px solid rgba(120,160,255,.25);
+    border-radius:12px;padding:10px 18px;font-family:monospace;font-weight:700;
+    font-size:17px;color:#ffd166}
+  .chip.best{color:#cfe0ff;font-size:13px;font-family:'Segoe UI',sans-serif;
+    letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+  .chip.best b{font-family:monospace;color:#4dffa0;font-size:15px}
+  .chip.clan-chip{color:#cfe0ff;font-size:12px;font-family:'Segoe UI',sans-serif;
+    letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+  .chip.clan-chip b{font-family:monospace;font-size:13px;padding:2px 8px;
+    border-radius:6px;letter-spacing:.1em}
+  .chip.no-clan{opacity:.55;font-size:12px}
+
+  .hub-title{position:absolute;top:84px;left:0;right:0;text-align:center;pointer-events:none}
+  .car-name{font-size:clamp(22px,4.4vw,40px);font-weight:900;letter-spacing:.08em;
+    color:#cfe4ff;text-shadow:0 0 30px rgba(90,150,255,.35);padding:0 12px}
+  .car-sub{font-size:11px;letter-spacing:.35em;color:#6f82a8;margin-top:6px;
+    text-transform:uppercase}
+
+  .hub-stats{position:absolute;left:22px;top:50%;transform:translateY(-50%);
+    width:210px;display:flex;flex-direction:column;gap:14px;pointer-events:none}
+  .stat .lbl{display:flex;justify-content:space-between;font-size:10px;
+    letter-spacing:.15em;color:#8fa2c9;text-transform:uppercase;margin-bottom:5px}
+  .stat .lbl b{font-family:monospace;color:#cfe0ff;font-size:11px}
+  .stat .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+  .stat .bar i{display:block;height:100%;border-radius:4px;
+    background:linear-gradient(90deg,#2f7bff,#4dffa0);transition:width .45s}
+
+  .hub-bottom{position:absolute;bottom:20px;left:0;right:0;display:flex;
+    flex-direction:column;align-items:center;gap:10px;padding:0 16px}
+
+  .difficulty-select{display:flex;gap:6px;background:rgba(10,14,30,.72);
+    padding:5px;border-radius:12px;border:1px solid rgba(120,160,255,.2)}
+  .difficulty-select button{padding:7px 14px;font-size:11px;border-radius:8px;
+    background:transparent;box-shadow:none;color:#7d8fb5;letter-spacing:.12em}
+  .difficulty-select button.active{color:#fff;background:rgba(50,90,180,.45);
+    border:1px solid rgba(120,160,255,.4)}
+  .difficulty-select button[data-diff="easy"].active{background:rgba(30,180,90,.3);
+    border-color:rgba(77,255,160,.5)}
+  .difficulty-select button[data-diff="hard"].active{background:rgba(240,160,30,.28);
+    border-color:rgba(255,209,102,.5)}
+  .difficulty-select button[data-diff="insane"].active{background:rgba(220,50,60,.3);
+    border-color:rgba(255,93,93,.5)}
+
+  .hub-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;
+    align-items:center;padding:0 10px}
+  .hub-actions button{padding:12px 18px;font-size:12px}
+  .hub-actions button.big{padding:13px 38px;font-size:14px}
+
+  /* СПИСКИ */
+  .car-grid, .clan-list, .tourn-list{display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:14px;overflow-y:auto;padding:14px 4px;flex:1;margin:6px 0}
+  .car-grid::-webkit-scrollbar, .clan-list::-webkit-scrollbar,
+  .tourn-list::-webkit-scrollbar{width:6px}
+  .car-grid::-webkit-scrollbar-thumb, .clan-list::-webkit-scrollbar-thumb,
+  .tourn-list::-webkit-scrollbar-thumb{background:rgba(120,160,255,.3);border-radius:3px}
+
+  .car-card{background:rgba(20,26,50,.72);border:1px solid rgba(120,160,255,.18);
+    border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .car-card.owned{border-color:rgba(77,255,160,.32)}
+  .car-card.current{border-color:rgba(255,209,102,.65);
+    box-shadow:0 0 26px rgba(255,209,102,.16)}
+  .car-card canvas{width:100%;height:auto;display:block;border-radius:8px;
+    background:radial-gradient(circle at 50% 65%,rgba(40,70,140,.2),rgba(0,0,0,.25))}
+  .car-card h3{font-size:15px;letter-spacing:.04em;margin-bottom:3px}
+  .car-card .desc{font-size:11px;color:#8fa2c9;line-height:1.35;min-height:30px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;
+    margin-top:4px;gap:8px}
+  .price{font-family:monospace;font-weight:800;font-size:15px;color:#ffd166}
+  .price.owned-t{color:#4dffa0;font-size:12px;letter-spacing:.1em}
+  .tag{font-size:11px;letter-spacing:.08em;padding:5px 10px;border-radius:8px;
+    font-weight:700;white-space:nowrap}
+  .tag.current-tag{background:rgba(255,209,102,.15);color:#ffd166;
+    border:1px solid rgba(255,209,102,.4)}
+  .tag.maxed{background:rgba(77,255,160,.13);color:#4dffa0;
+    border:1px solid rgba(77,255,160,.35)}
+  .tag.locked-tag{background:rgba(255,93,93,.13);color:#ff8a8a;
+    border:1px solid rgba(255,93,93,.35)}
+  .tag.done-tag{background:rgba(120,160,255,.15);color:#9fc0ff;
+    border:1px solid rgba(120,160,255,.35)}
+
+  .mini{display:flex;align-items:center;gap:8px;font-size:10px;color:#8fa2c9;
+    letter-spacing:.06em;text-transform:uppercase}
+  .mini span{width:74px;flex:none}
+  .mini-bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);
+    overflow:hidden}
+  .mini-bar i{display:block;height:100%;border-radius:3px;
+    background:linear-gradient(90deg,#2f7bff,#4dffa0)}
+
+  /* ТЮНИНГ */
+  .tune-head{display:flex;justify-content:space-between;align-items:baseline;
+    padding:12px 4px 4px;flex:none}
+  .tune-head #tuneCarName{font-size:18px;font-weight:800;letter-spacing:.05em}
+  .muted{color:#7d8fb5;font-size:12px;letter-spacing:.08em}
+  .upgrade-list{overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    padding:8px 4px;flex:1;margin:6px 0}
+  .upgrade-list::-webkit-scrollbar{width:6px}
+  .upgrade-list::-webkit-scrollbar-thumb{background:rgba(120,160,255,.3);border-radius:3px}
+  .upg-row{display:flex;align-items:center;gap:14px;background:rgba(20,26,50,.6);
+    border:1px solid rgba(120,160,255,.15);border-radius:12px;padding:12px 16px}
+  .upg-info{flex:1;min-width:0;text-align:left}
+  .upg-name{font-weight:800;font-size:15px;letter-spacing:.04em}
+  .upg-name .lvl{font-family:monospace;font-size:12px;color:#ffd166;margin-left:6px}
+  .upg-desc{font-size:11px;color:#8fa2c9;margin-top:3px}
+  .upg-pips{display:flex;gap:4px;flex:none}
+  .upg-pips i{width:11px;height:18px;border-radius:3px;background:rgba(255,255,255,.1);
+    border:1px solid rgba(120,160,255,.15)}
+  .upg-pips i.on{background:linear-gradient(180deg,#4dffa0,#18a866);
+    border-color:rgba(77,255,160,.6);box-shadow:0 0 8px rgba(77,255,160,.35)}
+  .upg-action{flex:none;min-width:96px;display:flex;justify-content:flex-end}
+
+  /* СТАЙЛИНГ */
+  .style-car-preview{margin:8px 0;display:flex;justify-content:center;flex:none}
+  .style-car-preview canvas{max-width:100%;height:auto;
+    background:radial-gradient(circle at 50% 70%, rgba(40,70,140,.25), rgba(0,0,0,.2));
+    border-radius:12px;border:1px solid rgba(120,160,255,.15)}
+  .style-sections{overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    padding:8px 4px;flex:1;margin:6px 0}
+  .style-sections::-webkit-scrollbar{width:6px}
+  .style-sections::-webkit-scrollbar-thumb{background:rgba(120,160,255,.3);border-radius:3px}
+  .style-section{background:rgba(20,26,50,.6);border:1px solid rgba(120,160,255,.15);
+    border-radius:12px;padding:10px 14px}
+  .style-label{font-size:11px;letter-spacing:.15em;color:#8fa2c9;margin-bottom:8px;
+    text-transform:uppercase;font-weight:700;text-align:left}
+  .style-options{display:flex;gap:8px;flex-wrap:wrap}
+  .style-btn{position:relative;height:38px;min-width:38px;padding:4px 10px;
+    border-radius:10px;background:rgba(255,255,255,.08);
+    border:2px solid rgba(120,160,255,.2);box-shadow:none;
+    font-size:11px;color:#cfe0ff;letter-spacing:.04em;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .style-btn .swatch{width:24px;height:24px;border-radius:50%;
+    border:2px solid rgba(255,255,255,.22);box-shadow:inset 0 -4px 8px rgba(0,0,0,.3)}
+  .style-btn.selected{border-color:#ffd166;box-shadow:0 0 14px rgba(255,209,102,.4);
+    background:rgba(255,209,102,.12)}
+  .style-btn.locked{opacity:.75}
+  .style-btn .cost{color:#ffd166;font-family:monospace;font-size:10px;
+    background:rgba(255,209,102,.15);padding:2px 5px;border-radius:5px}
+
+  /* КЛАНЫ */
+  .clan-card{background:rgba(20,26,50,.72);border:1px solid rgba(120,160,255,.18);
+    border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .clan-card.mine{border-color:rgba(255,209,102,.6);
+    box-shadow:0 0 26px rgba(255,209,102,.15)}
+  .clan-card .clan-head{display:flex;align-items:center;gap:10px}
+  .clan-tag{font-family:monospace;font-weight:800;font-size:14px;
+    padding:4px 10px;border-radius:7px;letter-spacing:.1em}
+  .clan-card h3{font-size:15px;letter-spacing:.04em}
+  .clan-card .clan-bonus{font-size:11px;color:#4dffa0;letter-spacing:.06em;
+    padding:5px 10px;background:rgba(77,255,160,.08);border-radius:7px;
+    border:1px solid rgba(77,255,160,.2);text-align:center;font-weight:600}
+  .clan-card .clan-actions{margin-top:auto;display:flex;justify-content:flex-end}
+  .clan-leaderboard{background:rgba(0,0,0,.22);border-radius:10px;padding:10px 12px;
+    margin-top:8px}
+  .clan-lb-row{display:flex;justify-content:space-between;padding:5px 0;
+    font-size:12px;border-bottom:1px dashed rgba(120,160,255,.1)}
+  .clan-lb-row:last-child{border:none}
+  .clan-lb-row .lb-name{color:#cfe0ff;font-weight:600}
+  .clan-lb-row .lb-score{color:#8fa2c9;font-family:monospace}
+  .clan-lb-row.you .lb-name{color:#ffd166;font-weight:800}
+  .clan-lb-row.you .lb-score{color:#ffd166}
+
+  /* ТУРНИРЫ */
+  .tourn-card{background:rgba(20,26,50,.72);border:1px solid rgba(120,160,255,.18);
+    border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .tourn-card.locked{opacity:.6}
+  .tourn-card.done{border-color:rgba(120,160,255,.4)}
+  .tourn-card h3{font-size:17px;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
+  .tourn-card .desc{font-size:11px;color:#8fa2c9;line-height:1.4}
+  .tourn-races{display:flex;flex-direction:column;gap:4px;margin:4px 0}
+  .tourn-race-item{display:flex;justify-content:space-between;align-items:center;
+    padding:5px 10px;background:rgba(0,0,0,.2);border-radius:7px;font-size:11px;
+    color:#8fa2c9;letter-spacing:.04em}
+  .tourn-race-item .rc-num{font-family:monospace;color:#5f76a0;font-weight:700}
+  .tourn-race-item .rc-car{color:#cfe0ff;font-weight:600;flex:1;margin:0 8px}
+  .tourn-race-item .rc-diff{font-size:10px;padding:2px 7px;border-radius:5px;
+    letter-spacing:.08em;font-weight:700}
+  .tourn-meta{display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;color:#8fa2c9;letter-spacing:.08em;padding:4px 0;
+    border-top:1px solid rgba(120,160,255,.12);margin-top:2px}
+  .tourn-meta b{font-family:monospace;color:#ffd166;font-size:13px}
+  .tourn-meta .prize{color:#4dffa0}
+
+  /* ТЕРРИТОРИЯ */
+  .terr-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 4px;
+    font-size:11px;letter-spacing:.06em;color:#8fa2c9;flex:none}
+  .legend-item{display:inline-flex;align-items:center;gap:6px}
+  .legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .city-map{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+    padding:12px;background:linear-gradient(135deg, #0a0e1a, #151a2a);
+    border-radius:14px;border:1px solid rgba(120,160,255,.2);flex:1;
+    min-height:0;overflow-y:auto}
+  @media (max-width:760px){.city-map{grid-template-columns:repeat(2,1fr)}}
+  .district-tile{aspect-ratio:1.3;border-radius:10px;padding:10px;
+    display:flex;flex-direction:column;justify-content:space-between;gap:4px;
+    border:2px solid;position:relative;overflow:hidden;
+    transition:transform .15s;cursor:pointer;
+    min-height:110px}
+  .district-tile:hover{transform:scale(1.03)}
+  .district-tile.mine{box-shadow:inset 0 0 22px rgba(255,209,102,.25)}
+  .district-tile .d-name{font-weight:800;font-size:13px;letter-spacing:.04em;
+    color:#e8eeff;text-shadow:0 1px 4px #000;text-align:left}
+  .district-tile .d-owner{font-family:monospace;font-weight:800;font-size:11px;
+    padding:2px 7px;border-radius:5px;align-self:flex-start}
+  .district-tile .d-bonus{font-size:10px;color:#9fb8d8;letter-spacing:.04em;
+    text-align:left}
+  .district-tile .d-defense{font-size:10px;letter-spacing:.15em;color:#8fa2c9}
+  .district-tile .d-attack{position:absolute;bottom:6px;right:6px;
+    font-size:10px;font-weight:800;padding:4px 8px;border-radius:6px;
+    background:rgba(230,57,70,.92);color:#fff;letter-spacing:.08em;
+    box-shadow:0 2px 8px rgba(230,57,70,.4)}
+  .district-tile .d-mine{position:absolute;bottom:6px;right:6px;
+    font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;
+    background:rgba(255,209,102,.9);color:#000;letter-spacing:.08em}
+
+  /* РЕЗУЛЬТАТЫ */
+  .res-row{display:flex;justify-content:space-between;gap:34px;padding:10px 4px;
+    border-bottom:1px solid rgba(120,160,255,.13);font-size:14px}
+  .res-row:last-child{border:none}
+  .res-row .lbl{color:#8fa2c9;text-align:left}
+  .res-row .val{font-family:monospace;font-weight:700;font-size:15px}
+  #resBody{margin:18px 0 14px;min-width:280px}
+  .gold{color:#ffd166}.green{color:#4dffa0}.red{color:#ff5d5d}
+  .res-earn{font-size:13px;letter-spacing:.15em;text-transform:uppercase;
+    color:#8fa2c9;margin:6px 0 12px;display:flex;justify-content:center;
+    align-items:baseline;gap:12px}
+  .res-earn .earn-value{font-family:monospace;font-size:28px;font-weight:800;
+    color:#ffd166;letter-spacing:0}
+  .res-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+
+  .tourn-result,.district-result{background:rgba(80,120,220,.08);
+    border:1px solid rgba(120,160,255,.2);border-radius:12px;padding:12px 16px;
+    margin:10px 0 4px}
+  .tourn-result .tourn-name,.district-result .dr-name{font-size:12px;
+    letter-spacing:.12em;color:#7d8fb5;text-transform:uppercase;margin-bottom:6px}
+  .tourn-result .tourn-status,.district-result .dr-title{font-size:16px;
+    font-weight:800;color:#ffd166;letter-spacing:.04em}
+  .tourn-result .tourn-sub,.district-result .dr-sub{font-size:11px;color:#8fa2c9;
+    margin-top:3px;letter-spacing:.06em}
+  .district-result.success{background:rgba(77,255,160,.1);
+    border-color:rgba(77,255,160,.4)}
+  .district-result.success .dr-title{color:#4dffa0}
+  .district-result.fail{background:rgba(255,93,93,.08);
+    border-color:rgba(255,93,93,.3)}
+  .district-result.fail .dr-title{color:#ff5d5d}
+
+  /* ТАЧ */
+  .touch{position:absolute;bottom:0;left:0;right:0;display:none;
+    justify-content:space-between;padding:0 18px 18px;z-index:15;pointer-events:none}
+  .touch.off{display:none!important}
+  .touch button{pointer-events:auto;width:112px;height:112px;border-radius:50%;
+    font-size:14px;letter-spacing:.1em;opacity:.88}
+  #gasBtn{background:linear-gradient(180deg,#22c55e,#12813c)}
+  #shiftBtn{background:linear-gradient(180deg,#f59e0b,#b45309);font-size:28px}
+  .touch button.active{transform:scale(.94);filter:brightness(1.25)}
+  @media (pointer:coarse){.touch:not(.off){display:flex}}
+
+  #errBox{position:fixed;top:8px;left:8px;right:8px;z-index:9999;
+    background:#c0392b;color:#fff;padding:10px 14px;border-radius:8px;
+    font-family:monospace;font-size:12px;white-space:pre-wrap;display:none}
+
+  @media (max-width:760px){
+    .hub-stats{display:none}
+    .hub-title{top:70px}
+    .panel.wide{padding:18px 14px}
+    .res-row{gap:12px;font-size:13px}
+    .upg-row{flex-wrap:wrap;gap:8px}
+    .upg-pips{order:3}
+    .upg-action{order:4;margin-left:auto}
+    .hub-actions{gap:6px}
+    .hub-actions button{padding:10px 14px;font-size:11px}
+    .hub-actions button.big{padding:11px 26px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div id="hub" class="overlay hidden">
+    <div class="hub-top">
+      <div class="chip">$ <span id="hubMoney">0</span></div>
+      <div class="chip clan-chip no-clan" id="hubClan">БЕЗ КЛАНА</div>
+      <div class="chip best">РЕКОРД <b id="hubBest">—</b></div>
+    </div>
+    <div class="hub-title">
+      <div class="car-name" id="hubCarName">—</div>
+      <div class="car-sub" id="hubTuneLevel">ГАРАЖ</div>
+    </div>
+    <div class="hub-stats" id="hubStats"></div>
+    <div class="hub-bottom">
+      <div class="difficulty-select" id="hubDifficulty">
+        <button data-diff="easy">ЛЕГКО</button>
+        <button data-diff="normal" class="active">НОРМА</button>
+        <button data-diff="hard">СЛОЖНО</button>
+        <button data-diff="insane">БЕЗУМИЕ</button>
+      </div>
+      <div class="hub-actions">
+        <button id="btnShop" class="ghost">МАГАЗИН</button>
+        <button id="btnTune" class="ghost">ТЮНИНГ</button>
+        <button id="btnStyle" class="ghost">СТАЙЛИНГ</button>
+        <button id="btnClan" class="ghost">КЛАН</button>
+        <button id="btnTerr" class="ghost">ТЕРРИТОРИЯ</button>
+        <button id="btnTourn" class="ghost">ТУРНИРЫ</button>
+        <button id="btnRace" class="primary big">ЗАЕЗД</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>МАГАЗИН</h2>
+        <div class="money-chip">$<span id="shopMoney">0</span></div>
+      </div>
+      <div class="car-grid" id="carGrid"></div>
+      <div class="panel-foot">
+        <button id="shopBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tuning" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>ТЮНИНГ</h2>
+        <div class="money-chip">$<span id="tuneMoney">0</span></div>
+      </div>
+      <div class="tune-head">
+        <span id="tuneCarName">—</span>
+        <span id="tuneCarLevel" class="muted"></span>
+      </div>
+      <div class="upgrade-list" id="upgradeList"></div>
+      <div class="panel-foot">
+        <button id="tuneBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="styling" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>СТАЙЛИНГ</h2>
+        <div class="money-chip">$<span id="styleMoney">0</span></div>
+      </div>
+      <div class="style-car-preview">
+        <canvas id="styleCanvas" width="520" height="240"></canvas>
+      </div>
+      <div class="style-sections" id="styleSections"></div>
+      <div class="panel-foot">
+        <button id="styleBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clans" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>КЛАНЫ</h2>
+        <div class="money-chip">$<span id="clanMoney">0</span></div>
+      </div>
+      <div class="clan-list" id="clanList"></div>
+      <div class="panel-foot">
+        <button id="clanBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="territory" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>ТЕРРИТОРИЯ ГОРОДА</h2>
+        <div class="money-chip">$<span id="terrMoney">0</span></div>
+      </div>
+      <div class="terr-legend" id="terrLegend"></div>
+      <div class="city-map" id="cityMap"></div>
+      <div class="panel-foot">
+        <button id="terrBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tournaments" class="screen hidden">
+    <div class="panel wide">
+      <div class="panel-head">
+        <h2>ТУРНИРЫ</h2>
+        <div class="money-chip">$<span id="tournMoney">0</span></div>
+      </div>
+      <div class="tourn-list" id="tournList"></div>
+      <div class="panel-foot">
+        <button id="tournBack" class="ghost">НАЗАД В ГАРАЖ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="screen hidden">
+    <div class="panel">
+      <h2 id="resTitle">ПОБЕДА</h2>
+      <div class="sub" id="resSub">1/4 МИЛИ</div>
+      <div id="resBody"></div>
+      <div id="resTournBlock"></div>
+      <div class="res-earn">
+        <span>ЗАРАБОТАНО</span>
+        <span class="earn-value" id="resEarn">+$0</span>
+      </div>
+      <div class="res-actions" id="resActions"></div>
+    </div>
+  </div>
+
+  <div class="touch off" id="touchControls">
+    <button id="gasBtn">ГАЗ</button>
+    <button id="shiftBtn">▲</button>
+  </div>
+</div>
+<div id="errBox"></div>
+
+<script>
+/* ============ ERROR GUARD ============ */
+const errBox = document.getElementById('errBox');
+window.addEventListener('error', e => {
+  errBox.style.display = 'block';
+  errBox.textContent = 'ОШИБКА: ' + (e.message || e.error) + '\n' + (e.filename || '') + ':' + (e.lineno || '');
+});
+
+/* ============ МАШИНЫ ============ */
+const CARS = [
+  { id:'hatch', name:'Ржавый Хэтч', price:0,
+    desc:'Старая, но верная. С чего-то надо начинать.',
+    power:0.82, weight:1.18, grip:0.85,
+    colors:{main:'#b8434f', top:'#e08585', dark:'#5c1a24', rim:'#9aa3b5'} },
+  { id:'wagon', name:'Семейный Универсал', price:600,
+    desc:'Неожиданно шустрый для своего веса.',
+    power:0.90, weight:1.15, grip:0.88,
+    colors:{main:'#3d7b3d', top:'#7fbf7f', dark:'#1a3d1a', rim:'#a8b8a8'} },
+  { id:'coupe', name:'Уличный Купе', price:1200,
+    desc:'Классика японского тюнинга. Лёгкий и злой.',
+    power:1.00, weight:1.00, grip:0.95,
+    colors:{main:'#e0a020', top:'#ffd77a', dark:'#7a5200', rim:'#d8dde8'} },
+  { id:'truck', name:'Пикап', price:1800,
+    desc:'Тяжёлый, но с огромным V8 под капотом.',
+    power:1.10, weight:1.30, grip:0.75,
+    colors:{main:'#8b4513', top:'#c88a4a', dark:'#3d1f00', rim:'#9a8a7a'} },
+  { id:'muscle', name:'Американский Маскл', price:2800,
+    desc:'Огромный V8 и почти никакого сцепления с дорогой.',
+    power:1.25, weight:1.12, grip:0.78,
+    colors:{main:'#1f6fe0', top:'#7fb4ff', dark:'#0d3a80', rim:'#c8d0de'} },
+  { id:'drift', name:'Дрифт-Седан', price:4500,
+    desc:'Турбина, задний привод и много дыма.',
+    power:1.15, weight:0.98, grip:1.05,
+    colors:{main:'#8a2be2', top:'#c99aff', dark:'#3d0f70', rim:'#e0d8ff'} },
+  { id:'sport', name:'Спорткар', price:6000,
+    desc:'Сбалансированный трековый болид для дорог.',
+    power:1.35, weight:0.94, grip:1.10,
+    colors:{main:'#ff8c00', top:'#ffc266', dark:'#7a3d00', rim:'#d8d0c0'} },
+  { id:'super', name:'Суперкар', price:8000,
+    desc:'Среднемоторный монстр. Только для профи.',
+    power:1.55, weight:0.86, grip:1.20,
+    colors:{main:'#14b866', top:'#7dffbe', dark:'#0a5c34', rim:'#d0ffe6'} },
+  { id:'r34', name:'Легенда JDM', price:10000,
+    desc:'Культовая японская легенда с огромным потенциалом.',
+    power:1.65, weight:0.88, grip:1.22,
+    colors:{main:'#1e5fc8', top:'#6a9ee8', dark:'#0a2a5c', rim:'#d8dde8'} },
+  { id:'racer', name:'Трек-Кар', price:12000,
+    desc:'Ультралёгкая машина без компромиссов.',
+    power:1.80, weight:0.75, grip:1.40,
+    colors:{main:'#f0f0f0', top:'#ffffff', dark:'#888888', rim:'#2a2a30'} },
+  { id:'hyper', name:'Гиперкар', price:15000,
+    desc:'Вершина эволюции. Дороже — только звёзды.',
+    power:1.95, weight:0.78, grip:1.35,
+    colors:{main:'#ff2d55', top:'#ff8fa8', dark:'#8c0018', rim:'#ffd8e0'} },
+  { id:'electric', name:'Электро-Гипер', price:20000,
+    desc:'Мгновенный крутящий момент. Никаких компромиссов.',
+    power:2.10, weight:0.82, grip:1.38,
+    colors:{main:'#00b8d4', top:'#66e0ff', dark:'#005a70', rim:'#b8f0ff'} }
+];
+
+const UPGRADES = [
+  { id:'engine', name:'Двигатель',  desc:'+ мощность',           max:5, baseCost:150, costMul:1.55 },
+  { id:'turbo',  name:'Турбина',    desc:'+ мощность на верхах', max:5, baseCost:180, costMul:1.55 },
+  { id:'tires',  name:'Шины',       desc:'+ сцепление и старт',  max:5, baseCost:130, costMul:1.55 },
+  { id:'weight', name:'Облегчение', desc:'- масса',              max:5, baseCost:160, costMul:1.55 }
+];
+const ZERO_UPG = {engine:0, turbo:0, tires:0, weight:0};
+
+/* ============ КОСМЕТИКА ============ */
+const PAINTS = [
+  { id:'stock', name:'Заводская', color:null },
+  { id:'red', name:'Алый', color:'#e63946' },
+  { id:'blue', name:'Лазурный', color:'#2f7bff' },
+  { id:'green', name:'Изумруд', color:'#14b866' },
+  { id:'black', name:'Матовый', color:'#1a1a1a' },
+  { id:'white', name:'Жемчуг', color:'#e8eef8' },
+  { id:'orange', name:'Оранж', color:'#ff8c00' },
+  { id:'purple', name:'Фиолет', color:'#8a2be2' },
+  { id:'pink', name:'Розовый', color:'#ff44aa', cost:1500 },
+  { id:'gold', name:'Золото', color:'#ffd166', cost:5000 },
+  { id:'chrome', name:'Хром', color:'#c8d0e0', cost:8000 },
+  { id:'violet', name:'Неон-фиолет', color:'#aa44ff', cost:2500 }
+];
+
+const RIM_COLORS = [
+  { id:'silver', name:'Серебро', color:'#d0d5e0' },
+  { id:'black', name:'Чёрный', color:'#2a2a30' },
+  { id:'red', name:'Красный', color:'#e63946' },
+  { id:'blue', name:'Синий', color:'#2f7bff' },
+  { id:'gold', name:'Золото', color:'#d4a017', cost:1000 },
+  { id:'chrome', name:'Хром', color:'#e8eef8', cost:1500 }
+];
+
+const DECALS = [
+  { id:'none', name:'Без наклеек' },
+  { id:'stripes', name:'Полосы', cost:300 },
+  { id:'checker', name:'Шахматка', cost:500 },
+  { id:'sponsor', name:'Спонсоры', cost:600 },
+  { id:'flames', name:'Пламя', cost:800 },
+  { id:'tribal', name:'Трайбл', cost:1200 }
+];
+
+const NEONS = [
+  { id:'none', name:'Без неона' },
+  { id:'cyan', name:'Циан', color:'#00ffff', cost:800 },
+  { id:'pink', name:'Розовый', color:'#ff44cc', cost:800 },
+  { id:'green', name:'Зелёный', color:'#44ff88', cost:800 },
+  { id:'purple', name:'Фиолет', color:'#aa44ff', cost:800 },
+  { id:'orange', name:'Оранж', color:'#ffaa00', cost:800 }
+];
+
+/* ============ СЛОЖНОСТЬ ============ */
+const DIFFICULTIES = {
+  easy:   { id:'easy',   name:'ЛЕГКО',   aiMult:0.80, rewardMult:0.7,  color:'#4dffa0' },
+  normal: { id:'normal', name:'НОРМА',   aiMult:1.00, rewardMult:1.0,  color:'#cfe0ff' },
+  hard:   { id:'hard',   name:'СЛОЖНО',  aiMult:1.18, rewardMult:1.7,  color:'#ffd166' },
+  insane: { id:'insane', name:'БЕЗУМИЕ', aiMult:1.38, rewardMult:2.6,  color:'#ff5d5d' }
+};
+
+/* ============ КЛАНЫ ============ */
+const CLANS = [
+  { id:'wolves', name:'Ночные Волки', tag:'NWO',
+    bonus:'+15% денег за победы', mods:{money:1.15}, color:'#8a2be2',
+    members:[
+      {name:'Витязь', score:18420},{name:'Тень', score:15600},
+      {name:'Гром', score:12300},{name:'Клык', score:9800},
+      {name:'Волчица', score:7400}
+    ]},
+  { id:'turbo', name:'Турбо Клуб', tag:'TRB',
+    bonus:'+7% мощности', mods:{power:1.07}, color:'#ff8c00',
+    members:[
+      {name:'BoostKing', score:21050},{name:'Турбо_Дэн', score:17200},
+      {name:'Свист', score:13100},{name:'Blowoff', score:10500},
+      {name:'Наддув', score:8100}
+    ]},
+  { id:'drift', name:'Дрифт Синдикат', tag:'DRS',
+    bonus:'+7% сцепления', mods:{grip:1.07}, color:'#14b866',
+    members:[
+      {name:'Sideways', score:19800},{name:'Дым', score:16400},
+      {name:'Крен', score:12200},{name:'Дрифтер', score:9600},
+      {name:'Угол', score:6900}
+    ]},
+  { id:'foxes', name:'Стальные Лисы', tag:'SLV',
+    bonus:'+5% мощности и сцепления', mods:{power:1.05, grip:1.05}, color:'#3d7bff',
+    members:[
+      {name:'Хитрец', score:22500},{name:'Лис', score:18000},
+      {name:'Сталь', score:14300},{name:'Рыжий', score:11000},
+      {name:'Нора', score:7800}
+    ]}
+];
+
+/* ============ ТЕРРИТОРИИ ============ */
+const DISTRICTS = [
+  { id:'d1', name:'Промзона',      bonusType:'power', bonusVal:0.02, defense:1, oppCar:'coupe',  oppDiff:'easy' },
+  { id:'d2', name:'Порт',          bonusType:'money', bonusVal:0.03, defense:1, oppCar:'wagon',  oppDiff:'normal' },
+  { id:'d3', name:'Старый Город',  bonusType:'grip',  bonusVal:0.02, defense:2, oppCar:'muscle', oppDiff:'normal' },
+  { id:'d4', name:'Тоннели',       bonusType:'power', bonusVal:0.03, defense:2, oppCar:'drift',  oppDiff:'hard' },
+  { id:'d5', name:'Бизнес-Центр',  bonusType:'money', bonusVal:0.05, defense:3, oppCar:'super',  oppDiff:'hard' },
+  { id:'d6', name:'Кольцевая',     bonusType:'grip',  bonusVal:0.04, defense:3, oppCar:'sport',  oppDiff:'insane' },
+  { id:'d7', name:'Заводы',        bonusType:'power', bonusVal:0.04, defense:2, oppCar:'drift',  oppDiff:'insane' },
+  { id:'d8', name:'Аэропорт',      bonusType:'money', bonusVal:0.06, defense:3, oppCar:'hyper',  oppDiff:'insane' }
+];
+
+/* ============ ТУРНИРЫ ============ */
+const TOURNAMENTS = [
+  { id:'street', name:'Уличный Турнир', entry:500, prize:2500,
+    desc:'4 заезда. Для начинающих гонщиков.',
+    minTier:0, requires:null,
+    races:[
+      {car:'coupe',  diff:'easy'},
+      {car:'coupe',  diff:'normal'},
+      {car:'muscle', diff:'normal'},
+      {car:'drift',  diff:'hard'}
+    ]},
+  { id:'pro', name:'Профессиональная Лига', entry:2500, prize:12000,
+    desc:'5 заездов. Только для серьёзных машин.',
+    minTier:4, requires:'street',
+    races:[
+      {car:'muscle', diff:'normal'},
+      {car:'drift',  diff:'normal'},
+      {car:'drift',  diff:'hard'},
+      {car:'super',  diff:'hard'},
+      {car:'super',  diff:'insane'}
+    ]},
+  { id:'legend', name:'Легендарный Кубок', entry:8000, prize:40000,
+    desc:'6 заездов. Только для гиперкаров.',
+    minTier:7, requires:'pro',
+    races:[
+      {car:'super', diff:'hard'},
+      {car:'super', diff:'insane'},
+      {car:'hyper', diff:'hard'},
+      {car:'hyper', diff:'insane'},
+      {car:'hyper', diff:'insane'},
+      {car:'hyper', diff:'insane'}
+    ]}
+];
+
+/* ============ СОХРАНЕНИЕ ============ */
+const SAVE_KEY = 'dragrace_save_v3';
+let save = null;
+
+function defaultSave(){
+  return {
+    money:600, ownedCars:['hatch'], currentCar:'hatch',
+    upgrades:{}, best:null,
+    clan:null, clanPoints:0,
+    difficulty:'normal',
+    tournamentCompletions:{},
+    cosmetic:{}, cosmeticOwned:{ paints:[], rims:[], decals:[], neons:[] },
+    districts:{}
+  };
+}
+function loadSave(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) save = JSON.parse(raw);
+  } catch(e){ save = null; }
+  if (!save || typeof save !== 'object') save = defaultSave();
+
+  if (!Array.isArray(save.ownedCars) || !save.ownedCars.length) save.ownedCars = ['hatch'];
+  if (!save.upgrades || typeof save.upgrades !== 'object') save.upgrades = {};
+  for (const c of CARS){
+    const u = save.upgrades[c.id];
+    if (!u || typeof u !== 'object') save.upgrades[c.id] = {engine:0,turbo:0,tires:0,weight:0};
+    else for (const k of Object.keys(ZERO_UPG))
+      if (typeof u[k] !== 'number') u[k] = 0;
+  }
+  if (typeof save.money !== 'number' || !isFinite(save.money)) save.money = 600;
+  if (!save.ownedCars.includes(save.currentCar)) save.currentCar = save.ownedCars[0];
+  if (save.clan === undefined) save.clan = null;
+  if (typeof save.clanPoints !== 'number') save.clanPoints = 0;
+  if (!save.difficulty || !DIFFICULTIES[save.difficulty]) save.difficulty = 'normal';
+  if (!save.tournamentCompletions || typeof save.tournamentCompletions !== 'object')
+    save.tournamentCompletions = {};
+
+  // Cosmetic
+  if (!save.cosmetic || typeof save.cosmetic !== 'object') save.cosmetic = {};
+  if (!save.cosmeticOwned || typeof save.cosmeticOwned !== 'object')
+    save.cosmeticOwned = { paints:[], rims:[], decals:[], neons:[] };
+  for (const k of ['paints','rims','decals','neons'])
+    if (!Array.isArray(save.cosmeticOwned[k])) save.cosmeticOwned[k] = [];
+  for (const c of CARS){
+    if (!save.cosmetic[c.id] || typeof save.cosmetic[c.id] !== 'object')
+      save.cosmetic[c.id] = {};
+    const co = save.cosmetic[c.id];
+    if (!co.paint) co.paint = 'stock';
+    if (!co.rim) co.rim = 'silver';
+    if (!co.decal) co.decal = 'none';
+    if (!co.neon) co.neon = 'none';
+  }
+
+  // Districts
+  if (!save.districts || typeof save.districts !== 'object') save.districts = {};
+  DISTRICTS.forEach((d, i) => {
+    if (!save.districts[d.id]) save.districts[d.id] = CLANS[i % CLANS.length].id;
+  });
+}
+function persist(){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){}
+}
+
+/* ============ ХЕЛПЕРЫ ============ */
+function getCarSpec(id){ return CARS.find(c => c.id === id) || CARS[0]; }
+function computeAccel(spec, up){
+  const power  = spec.power  + (up.engine||0)*0.06 + (up.turbo||0)*0.05;
+  const weight = spec.weight - (up.weight||0)*0.04;
+  return (power / Math.max(0.3, weight)) * 1.22;
+}
+function getStats(carId){
+  const spec = getCarSpec(carId);
+  const up   = save.upgrades[carId] || ZERO_UPG;
+  const power  = spec.power  + up.engine*0.06 + up.turbo*0.05;
+  const weight = spec.weight - up.weight*0.04;
+  const grip   = spec.grip   + up.tires*0.06;
+  return { power, weight, grip, accelMult: computeAccel(spec, up) };
+}
+function upgradeCost(upg, lvl){ return Math.round(upg.baseCost * Math.pow(upg.costMul, lvl)); }
+function fmtMoney(n){ return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+const clamp01 = v => Math.max(0, Math.min(1, v));
+
+function getClanBonus(){
+  if (!save.clan) return { money:1, power:1, grip:1 };
+  const clan = CLANS.find(c => c.id === save.clan);
+  if (!clan) return { money:1, power:1, grip:1 };
+  return {
+    money: clan.mods.money || 1,
+    power: clan.mods.power || 1,
+    grip:  clan.mods.grip  || 1
+  };
+}
+function getTerritoryBonus(){
+  const result = { money:1, power:1, grip:1 };
+  if (!save.clan) return result;
+  for (const d of DISTRICTS){
+    if (save.districts[d.id] === save.clan){
+      if (d.bonusType === 'money') result.money += d.bonusVal;
+      if (d.bonusType === 'power') result.power += d.bonusVal;
+      if (d.bonusType === 'grip')  result.grip  += d.bonusVal;
+    }
+  }
+  return result;
+}
+function getDiffCfg(id){ return DIFFICULTIES[id] || DIFFICULTIES.normal; }
+
+/* ============ ЦВЕТА ============ */
+function hexToRgb(h){
+  h = h.replace('#','');
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return { r: parseInt(h.substr(0,2),16), g: parseInt(h.substr(2,2),16), b: parseInt(h.substr(4,2),16) };
+}
+function rgbToHex(r,g,b){
+  const f = v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  return '#' + f(r) + f(g) + f(b);
+}
+function lighten(hex, amt){
+  const c = hexToRgb(hex);
+  return rgbToHex(c.r + (255-c.r)*amt, c.g + (255-c.g)*amt, c.b + (255-c.b)*amt);
+}
+function darken(hex, amt){
+  const c = hexToRgb(hex);
+  return rgbToHex(c.r*(1-amt), c.g*(1-amt), c.b*(1-amt));
+}
+function deriveColors(mainHex, original){
+  return {
+    main: mainHex,
+    top: lighten(mainHex, 0.4),
+    dark: darken(mainHex, 0.55),
+    rim: original.rim
+  };
+}
+
+/* ============ КОСМЕТИКА — ЛОГИКА ============ */
+function cosmeticList(type){
+  return type === 'paints' ? PAINTS : type === 'rims' ? RIM_COLORS : type === 'decals' ? DECALS : NEONS;
+}
+function isCosmeticOwned(type, id){
+  const all = cosmeticList(type);
+  const item = all.find(x => x.id === id);
+  if (!item) return false;
+  if (!item.cost) return true;
+  return (save.cosmeticOwned[type] || []).includes(id);
+}
+function buyCosmetic(type, id){
+  const all = cosmeticList(type);
+  const item = all.find(x => x.id === id);
+  if (!item || isCosmeticOwned(type, id)) return true;
+  const cost = item.cost || 0;
+  if (save.money < cost) return false;
+  save.money -= cost;
+  if (!save.cosmeticOwned[type]) save.cosmeticOwned[type] = [];
+  save.cosmeticOwned[type].push(id);
+  persist();
+  return true;
+}
+function applyCosmetic(type, id){
+  const carId = save.currentCar;
+  if (!save.cosmetic[carId]) save.cosmetic[carId] = { paint:'stock', rim:'silver', decal:'none', neon:'none' };
+  const key = type === 'paints' ? 'paint' : type === 'rims' ? 'rim' : type === 'decals' ? 'decal' : 'neon';
+  if (!isCosmeticOwned(type, id)) return;
+  save.cosmetic[carId][key] = id;
+  persist();
+}
+function getCosmeticFor(carId){
+  return save.cosmetic[carId] || { paint:'stock', rim:'silver', decal:'none', neon:'none' };
+}
+
+/* ============ ФИЗИКА ============ */
+const QUARTER = 402.336;
+const GEARS = [3.55, 2.15, 1.55, 1.20, 0.98];
+const MAX_RPM = 7800, IDLE_RPM = 900, RPM_K = 122.4;
+const POWER = 2.9, DRAG = 0.00055, PERFECT = 7100, SHIFT_T = 0.16;
+
+function torqueAt(x){
+  if (x < 0.08) return 0.32;
+  if (x > 1) x = 1;
+  let t = 1 - 1.6 * Math.pow(x - 0.72, 2);
+  if (x > 0.92) t -= (x - 0.92) * 8;
+  return Math.max(0.04, t);
+}
+function stepCar(car, dt, throttle){
+  if (car.shiftTimer > 0) car.shiftTimer = Math.max(0, car.shiftTimer - dt);
+  if (car.boostTimer > 0) car.boostTimer = Math.max(0, car.boostTimer - dt);
+  if (car.flashTimer > 0) car.flashTimer = Math.max(0, car.flashTimer - dt);
+  const rpmCalc = car.speed * GEARS[car.gear] * RPM_K;
+  let rpm = rpmCalc;
+  if (car.gear === 0 && throttle && rpm < 3300) rpm = 3300;
+  if (rpm < IDLE_RPM) rpm = IDLE_RPM;
+  let limiter = false;
+  if (rpm >= MAX_RPM){ rpm = MAX_RPM; limiter = true; }
+  let a = 0;
+  if (throttle && car.shiftTimer <= 0 && !limiter){
+    let tq = torqueAt(rpm / MAX_RPM);
+    if (car.boostTimer > 0) tq *= 1.22;
+    const launchBlend = Math.max(0, 1 - car.speed / 25);
+    const gripMult = 1 + ((0.55 + 0.45 * car.grip) - 1) * launchBlend;
+    a = tq * GEARS[car.gear] * POWER * car.accelMult * gripMult;
+  }
+  a -= DRAG * car.speed * car.speed;
+  if (car.speed > 0.1) a -= 0.25;
+  car.speed = Math.max(0, car.speed + a * dt);
+  car.dist += car.speed * dt;
+  car.rpm = rpm;
+  car.limiter = limiter;
+  car.wheelAngle += car.speed * dt * 2.4;
+}
+function shiftUp(car){
+  if (car.gear >= GEARS.length - 1 || car.shiftTimer > 0) return;
+  const at = car.rpm;
+  car.gear++; car.shiftTimer = SHIFT_T;
+  if (at >= PERFECT && at < MAX_RPM){
+    car.boostTimer = 0.7; car.flashTimer = 0.7;
+    car.perfectCount = (car.perfectCount || 0) + 1;
+    beep(880, 0.07, 0.09);
+  } else beep(220, 0.05, 0.05);
+}
+
+/* ============ СОСТОЯНИЕ ============ */
+const state = {
+  phase:'hub', countdown:3, raceTime:0, afterPlayer:0,
+  lastResult:null, tournament:null, districtAttack:null, lastRaceOpts:null
+};
+let player = null, opp = null;
+let hubParticles = [];
+
+/* ============ СБРОС ЗАЕЗДА ============ */
+function resetRace(opts){
+  opts = opts || {};
+  const playerSpec = getCarSpec(save.currentCar);
+  const pStats = getStats(save.currentCar);
+  const pUpg   = save.upgrades[save.currentCar] || ZERO_UPG;
+  const clanBonus = getClanBonus();
+  const terrBonus = getTerritoryBonus();
+
+  let oppSpec;
+  if (opts.opponentCar){
+    oppSpec = getCarSpec(opts.opponentCar);
+  } else {
+    const others = CARS.filter(c => c.id !== save.currentCar);
+    oppSpec = others.length ? others[Math.floor(Math.random() * others.length)] : CARS[0];
+  }
+  const diffId = opts.difficulty || save.difficulty;
+  const diffCfg = getDiffCfg(diffId);
+
+  const totalUpg = Object.values(pUpg).reduce((a,b) => a+b, 0);
+  let pool = Math.min(15, Math.floor(totalUpg / 3) + Math.floor(Math.random() * 5));
+  const oppUpg = {engine:0, turbo:0, tires:0, weight:0};
+  const keys = ['engine','turbo','tires','weight'];
+  while (pool > 0){
+    const idx = Math.floor(Math.random() * 4);
+    if (oppUpg[keys[idx]] < 5){ oppUpg[keys[idx]]++; pool--; }
+    if (Object.values(oppUpg).every(l => l >= 5)) break;
+  }
+  const oppStats = {
+    accelMult: computeAccel(oppSpec, oppUpg),
+    grip: oppSpec.grip + oppUpg.tires * 0.06
+  };
+
+  const stockAccel = computeAccel(playerSpec, ZERO_UPG);
+  const aiBase = stockAccel + (pStats.accelMult - stockAccel) * 0.4;
+  const aiVar  = 0.94 + Math.random() * 0.08;
+
+  const pAccel = pStats.accelMult * clanBonus.power * (1 + terrBonus.power);
+  const pGrip  = pStats.grip * clanBonus.grip * (1 + terrBonus.grip);
+  const clanObj = save.clan ? CLANS.find(c => c.id === save.clan) : null;
+
+  player = {
+    dist:0, speed:0, rpm:IDLE_RPM, gear:0,
+    shiftTimer:0, boostTimer:0, flashTimer:0, limiter:false,
+    wheelAngle:0,
+    accelMult:pAccel, grip:pGrip,
+    colors:playerSpec.colors,
+    cosmetic: getCosmeticFor(save.currentCar),
+    visualUpg:{engine:pUpg.engine, turbo:pUpg.turbo, tires:pUpg.tires, weight:pUpg.weight},
+    clanTag: clanObj ? clanObj.tag : null,
+    clanColor: clanObj ? clanObj.color : null,
+    finished:false, finishTime:0, perfectCount:0
+  };
+  opp = {
+    dist:0, speed:0, rpm:IDLE_RPM, gear:0,
+    shiftTimer:0, boostTimer:0, flashTimer:0, limiter:false,
+    wheelAngle:0,
+    accelMult: aiBase * aiVar * diffCfg.aiMult,
+    grip: Math.min(1.6, oppStats.grip * (0.94 + Math.random() * 0.1) * Math.sqrt(diffCfg.aiMult)),
+    colors:oppSpec.colors,
+    cosmetic: null,
+    visualUpg:oppUpg,
+    finished:false, finishTime:0, perfectCount:0,
+    shiftPoint:7150 + Math.random() * 400
+  };
+  state.raceTime = 0;
+  state.afterPlayer = 0;
+  state.countdown = 3.0;
+  state.lastRaceOpts = opts;
+}
+
+/* ============ ЗВУК ============ */
+let audioCtx = null, engineOsc = null, engineOsc2 = null;
+let engineGain = null, engineFilter = null;
+function initAudio(){
+  if (audioCtx) return;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    engineFilter = audioCtx.createBiquadFilter();
+    engineFilter.type = 'lowpass';
+    engineFilter.frequency.value = 900; engineFilter.Q.value = 3;
+    engineGain = audioCtx.createGain(); engineGain.gain.value = 0;
+    engineOsc = audioCtx.createOscillator(); engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 40;
+    engineOsc2 = audioCtx.createOscillator(); engineOsc2.type = 'square'; engineOsc2.frequency.value = 20;
+    const g2 = audioCtx.createGain(); g2.gain.value = 0.35;
+    engineOsc.connect(engineFilter);
+    engineOsc2.connect(g2).connect(engineFilter);
+    engineFilter.connect(engineGain).connect(audioCtx.destination);
+    engineOsc.start(); engineOsc2.start();
+  }catch(e){ audioCtx = null; }
+}
+function beep(freq, dur, vol){
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+  o.type = 'square'; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+function updateEngineSound(){
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const rpm = player ? player.rpm : IDLE_RPM;
+  const f = 26 + (rpm / MAX_RPM) * 115;
+  engineOsc.frequency.setTargetAtTime(f, now, 0.02);
+  engineOsc2.frequency.setTargetAtTime(f * 0.5, now, 0.02);
+  engineFilter.frequency.setTargetAtTime(400 + (rpm / MAX_RPM) * 2200, now, 0.05);
+  const on = (state.phase === 'racing' || state.phase === 'countdown');
+  engineGain.gain.setTargetAtTime(on ? 0.055 : 0, now, 0.06);
+}
+
+/* ============ ВВОД ============ */
+const input = { gas:false };
+window.addEventListener('keydown', e => {
+  const k = e.code;
+  if (k === 'Space' || k === 'ArrowUp' || k === 'KeyW'){
+    e.preventDefault();
+    if (state.phase === 'racing' || state.phase === 'countdown') input.gas = true;
+  }
+  if (k === 'ArrowRight' || k === 'KeyD' || k === 'ShiftLeft' || k === 'ShiftRight'){
+    e.preventDefault();
+    if (state.phase === 'racing' && player) shiftUp(player);
+  }
+  if (k === 'Escape'){
+    if (['shop','tuning','styling','clans','territory','tournaments'].includes(state.phase)) showHub();
+  }
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') input.gas = false;
+});
+const gasBtn = document.getElementById('gasBtn');
+const shiftBtn = document.getElementById('shiftBtn');
+gasBtn.addEventListener('pointerdown', e => { e.preventDefault(); input.gas = true; gasBtn.classList.add('active'); });
+const releaseGas = () => { input.gas = false; gasBtn.classList.remove('active'); };
+window.addEventListener('pointerup', releaseGas);
+window.addEventListener('pointercancel', releaseGas);
+gasBtn.addEventListener('pointerleave', releaseGas);
+shiftBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (state.phase === 'racing' && player) shiftUp(player);
+  shiftBtn.classList.add('active');
+  setTimeout(() => shiftBtn.classList.remove('active'), 110);
+});
+
+/* ============ ЭКРАНЫ ============ */
+const elHub = document.getElementById('hub');
+const elShop = document.getElementById('shop');
+const elTuning = document.getElementById('tuning');
+const elStyling = document.getElementById('styling');
+const elClans = document.getElementById('clans');
+const elTerr = document.getElementById('territory');
+const elTourn = document.getElementById('tournaments');
+const elResults = document.getElementById('results');
+const elTouch = document.getElementById('touchControls');
+
+function hideAllScreens(){
+  [elHub,elShop,elTuning,elStyling,elClans,elTerr,elTourn,elResults].forEach(e => e.classList.add('hidden'));
+}
+function setPhase(p){
+  state.phase = p;
+  const racing = (p === 'racing' || p === 'countdown');
+  elTouch.classList.toggle('off', !racing);
+}
+function showHub(){
+  setPhase('hub'); hideAllScreens();
+  elHub.classList.remove('hidden');
+  state.tournament = null;
+  state.districtAttack = null;
+  updateHubUI(); input.gas = false;
+}
+function startRace(opts){
+  opts = opts || {};
+  hideAllScreens(); initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  state.tournament = opts.tournament || null;
+  state.districtAttack = opts.districtAttack || null;
+  resetRace(opts);
+  setPhase('countdown');
+  input.gas = false;
+}
+function showShop(){ setPhase('shop'); hideAllScreens(); elShop.classList.remove('hidden'); renderShop(); }
+function showTuning(){ setPhase('tuning'); hideAllScreens(); elTuning.classList.remove('hidden'); renderTuning(); }
+function showStyling(){ setPhase('styling'); hideAllScreens(); elStyling.classList.remove('hidden'); renderStyling(); }
+function showClans(){ setPhase('clans'); hideAllScreens(); elClans.classList.remove('hidden'); renderClans(); }
+function showTerritory(){ setPhase('territory'); hideAllScreens(); elTerr.classList.remove('hidden'); renderTerritory(); }
+function showTournaments(){ setPhase('tournaments'); hideAllScreens(); elTourn.classList.remove('hidden'); renderTournaments(); }
+
+document.getElementById('btnRace').onclick = () => startRace();
+document.getElementById('btnShop').onclick = showShop;
+document.getElementById('btnTune').onclick = showTuning;
+document.getElementById('btnStyle').onclick = showStyling;
+document.getElementById('btnClan').onclick = showClans;
+document.getElementById('btnTerr').onclick = showTerritory;
+document.getElementById('btnTourn').onclick = showTournaments;
+document.getElementById('shopBack').onclick = showHub;
+document.getElementById('tuneBack').onclick = showHub;
+document.getElementById('styleBack').onclick = showHub;
+document.getElementById('clanBack').onclick = showHub;
+document.getElementById('terrBack').onclick = showHub;
+document.getElementById('tournBack').onclick = showHub;
+
+/* ============ ХАБ ============ */
+function updateHubUI(){
+  const moneyEl = document.getElementById('hubMoney');
+  const bestEl = document.getElementById('hubBest');
+  const clanChip = document.getElementById('hubClan');
+  const carNameEl = document.getElementById('hubCarName');
+  const tuneLevelEl = document.getElementById('hubTuneLevel');
+  const statsEl = document.getElementById('hubStats');
+
+  if (moneyEl) moneyEl.textContent = fmtMoney(save.money);
+  if (bestEl) bestEl.textContent = save.best ? save.best.toFixed(3)+' с' : '—';
+
+  if (clanChip){
+    if (save.clan){
+      const clan = CLANS.find(c => c.id === save.clan);
+      if (clan){
+        clanChip.className = 'chip clan-chip';
+        clanChip.innerHTML = 'КЛАН <b style="background:'+clan.color+'33;color:'+clan.color+'">' + clan.tag + '</b>';
+      } else {
+        clanChip.className = 'chip clan-chip no-clan';
+        clanChip.textContent = 'БЕЗ КЛАНА';
+      }
+    } else {
+      clanChip.className = 'chip clan-chip no-clan';
+      clanChip.textContent = 'БЕЗ КЛАНА';
+    }
+  }
+
+  document.querySelectorAll('#hubDifficulty button').forEach(b => {
+    b.classList.toggle('active', b.dataset.diff === save.difficulty);
+  });
+
+  const spec = getCarSpec(save.currentCar);
+  const stats = getStats(save.currentCar);
+  if (carNameEl) carNameEl.textContent = spec.name;
+
+  const upg = save.upgrades[save.currentCar] || ZERO_UPG;
+  const total = Object.values(upg).reduce((a,b) => a+b, 0);
+  const terrCount = save.clan ? DISTRICTS.filter(d => save.districts[d.id] === save.clan).length : 0;
+  if (tuneLevelEl) tuneLevelEl.textContent = 'ТЮНИНГ ' + total + '/20 · ТЕРРИТОРИЙ ' + terrCount + '/' + DISTRICTS.length;
+
+  if (statsEl){
+    const bars = [
+      { name:'РАЗГОН',    pct: clamp01(stats.accelMult / 3.5), val: stats.accelMult.toFixed(2)+'x' },
+      { name:'СЦЕПЛЕНИЕ', pct: clamp01((stats.grip - 0.6) / 1.0), val: stats.grip.toFixed(2) },
+      { name:'ЛЁГКОСТЬ',  pct: clamp01((1.3 - stats.weight) / 0.7), val: stats.weight.toFixed(2) }
+    ];
+    statsEl.innerHTML = bars.map(b =>
+      '<div class="stat">' +
+      '<div class="lbl"><span>'+b.name+'</span><b>'+b.val+'</b></div>' +
+      '<div class="bar"><i style="width:'+(b.pct*100).toFixed(1)+'%"></i></div>' +
+      '</div>'
+    ).join('');
+  }
+}
+document.getElementById('hubDifficulty').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-diff]');
+  if (!btn) return;
+  save.difficulty = btn.dataset.diff;
+  persist(); updateHubUI();
+  beep(660, 0.06, 0.06);
+});
+
+/* ============ МАГАЗИН ============ */
+function miniStat(label, pct){
+  return '<div class="mini"><span>'+label+'</span><div class="mini-bar"><i style="width:'+
+    (clamp01(pct)*100).toFixed(0)+'%"></i></div></div>';
+}
+function renderShop(){
+  document.getElementById('shopMoney').textContent = fmtMoney(save.money);
+  const grid = document.getElementById('carGrid');
+  grid.innerHTML = '';
+
+  for (const car of CARS){
+    const owned = save.ownedCars.includes(car.id);
+    const current = save.currentCar === car.id;
+    const stats = getStats(car.id);
+    const card = document.createElement('div');
+    card.className = 'car-card' + (owned ? ' owned' : '') + (current ? ' current' : '');
+
+    let actionHTML = '';
+    if (owned){
+      actionHTML = current
+        ? '<span class="tag current-tag">В ГАРАЖЕ</span>'
+        : '<button class="btn-sm gold" data-select="'+car.id+'">ВЫБРАТЬ</button>';
+    } else {
+      const canBuy = save.money >= car.price;
+      actionHTML = '<button class="btn-sm buy" data-buy="'+car.id+'" '+(canBuy?'':'disabled')+'>КУПИТЬ</button>';
+    }
+
+    card.innerHTML =
+      '<canvas width="320" height="150"></canvas>' +
+      '<div><h3>'+car.name+'</h3><p class="desc">'+car.desc+'</p></div>' +
+      '<div style="display:flex;flex-direction:column;gap:5px">' +
+        miniStat('РАЗГОН', stats.accelMult / 3.5) +
+        miniStat('СЦЕПЛ.', (stats.grip - 0.6) / 1.0) +
+      '</div>' +
+      '<div class="card-foot">' +
+        '<span class="'+(owned ? 'price owned-t' : 'price')+'">'+(owned?'КУПЛЕНО':'$'+fmtMoney(car.price))+'</span>' +
+        actionHTML +
+      '</div>';
+    grid.appendChild(card);
+
+    const cv = card.querySelector('canvas');
+    const c2 = cv.getContext('2d');
+    c2.clearRect(0, 0, cv.width, cv.height);
+    const bg = c2.createRadialGradient(160, 100, 10, 160, 100, 180);
+    bg.addColorStop(0, 'rgba(60,90,170,.22)');
+    bg.addColorStop(1, 'rgba(0,0,0,0)');
+    c2.fillStyle = bg; c2.fillRect(0, 0, cv.width, cv.height);
+    const cardUpg = owned ? (save.upgrades[car.id] || ZERO_UPG) : ZERO_UPG;
+    const cardCos = owned ? getCosmeticFor(car.id) : null;
+    drawCar(c2, 160, 118, 1.18, 0, car.colors, 0, 0, cardUpg, null, cardCos);
+  }
+}
+document.getElementById('carGrid').addEventListener('click', e => {
+  const buyBtn = e.target.closest('[data-buy]');
+  if (buyBtn){ buyCar(buyBtn.dataset.buy); return; }
+  const selBtn = e.target.closest('[data-select]');
+  if (selBtn) selectCar(selBtn.dataset.select);
+});
+function buyCar(id){
+  const car = getCarSpec(id);
+  if (save.ownedCars.includes(id) || save.money < car.price) return;
+  save.money -= car.price;
+  save.ownedCars.push(id);
+  save.currentCar = id;
+  if (!save.upgrades[id]) save.upgrades[id] = {engine:0,turbo:0,tires:0,weight:0};
+  if (!save.cosmetic[id]) save.cosmetic[id] = {paint:'stock',rim:'silver',decal:'none',neon:'none'};
+  persist(); beep(880,0.1,0.1); renderShop(); updateHubUI();
+}
+function selectCar(id){
+  if (!save.ownedCars.includes(id)) return;
+  save.currentCar = id; persist(); beep(660,0.08,0.08);
+  renderShop(); updateHubUI();
+}
+
+/* ============ ТЮНИНГ ============ */
+function renderTuning(){
+  document.getElementById('tuneMoney').textContent = fmtMoney(save.money);
+  const spec = getCarSpec(save.currentCar);
+  document.getElementById('tuneCarName').textContent = spec.name;
+
+  const upgCur = save.upgrades[save.currentCar] || ZERO_UPG;
+  const total = Object.values(upgCur).reduce((a,b) => a+b, 0);
+  document.getElementById('tuneCarLevel').textContent =
+      'УРОВЕНЬ ТЮНИНГА ' + total + ' / ' + (UPGRADES.length * 5);
+
+  const list = document.getElementById('upgradeList');
+  list.innerHTML = '';
+
+  for (const upg of UPGRADES){
+    const lvl = upgCur[upg.id] || 0;
+    const maxed = lvl >= upg.max;
+    const cost = maxed ? 0 : upgradeCost(upg, lvl);
+    const canBuy = !maxed && save.money >= cost;
+    let pips = '';
+    for (let i = 0; i < upg.max; i++)
+      pips += '<i class="' + (i < lvl ? 'on' : '') + '"></i>';
+
+    const row = document.createElement('div');
+    row.className = 'upg-row';
+    row.innerHTML =
+      '<div class="upg-info">' +
+        '<div class="upg-name">'+upg.name+'<span class="lvl">'+lvl+'/'+upg.max+'</span></div>' +
+        '<div class="upg-desc">'+upg.desc+'</div>' +
+      '</div>' +
+      '<div class="upg-pips">'+pips+'</div>' +
+      '<div class="upg-action">' +
+        (maxed
+          ? '<span class="tag maxed">МАКС</span>'
+          : '<button class="btn-sm buy" data-upg="'+upg.id+'" '+(canBuy?'':'disabled')+'>$'+fmtMoney(cost)+'</button>') +
+      '</div>';
+    list.appendChild(row);
+  }
+}
+document.getElementById('upgradeList').addEventListener('click', e => {
+  const btn = e.target.closest('[data-upg]');
+  if (btn) buyUpgrade(btn.dataset.upg);
+});
+function buyUpgrade(catId){
+  const upg = UPGRADES.find(u => u.id === catId);
+  if (!upg) return;
+  const cur = save.upgrades[save.currentCar];
+  if (!cur) return;
+  const lvl = cur[catId] || 0;
+  if (lvl >= upg.max) return;
+  const cost = upgradeCost(upg, lvl);
+  if (save.money < cost) return;
+  save.money -= cost;
+  cur[catId] = lvl + 1;
+  persist(); beep(760,0.08,0.09); renderTuning(); updateHubUI();
+}
+
+/* ============ СТАЙЛИНГ ============ */
+function renderStyling(){
+  document.getElementById('styleMoney').textContent = fmtMoney(save.money);
+  const carId = save.currentCar;
+  const cos = getCosmeticFor(carId);
+  const spec = getCarSpec(carId);
+  const upg = save.upgrades[carId] || ZERO_UPG;
+
+  // preview
+  const cv = document.getElementById('styleCanvas');
+  const c2 = cv.getContext('2d');
+  c2.clearRect(0, 0, cv.width, cv.height);
+  const bg = c2.createRadialGradient(cv.width/2, cv.height*0.62, 20, cv.width/2, cv.height*0.62, 300);
+  bg.addColorStop(0, 'rgba(60,90,170,.28)');
+  bg.addColorStop(1, 'rgba(0,0,0,0)');
+  c2.fillStyle = bg; c2.fillRect(0, 0, cv.width, cv.height);
+  drawCar(c2, cv.width/2, cv.height*0.78, 2.0, 0, spec.colors, 0, 0, upg, null, cos);
+
+  const sections = document.getElementById('styleSections');
+  sections.innerHTML = '';
+
+  function makeSection(title, type, items, currentId, getSwatch, isText){
+    const wrap = document.createElement('div');
+    wrap.className = 'style-section';
+    wrap.innerHTML = '<div class="style-label">' + title + '</div><div class="style-options"></div>';
+    const opts = wrap.querySelector('.style-options');
+    for (const item of items){
+      const owned = isCosmeticOwned(type, item.id);
+      const selected = item.id === currentId;
+      const btn = document.createElement('button');
+      btn.className = 'style-btn' + (selected ? ' selected' : '') + (owned ? '' : ' locked');
+      if (isText){
+        btn.innerHTML = item.name + (owned ? '' : '<span class="cost">$' + item.cost + '</span>');
+      } else {
+        const color = getSwatch(item);
+        btn.innerHTML = '<span class="swatch" style="background:' + (color || 'transparent') + '"></span>';
+      }
+      btn.title = item.name;
+      btn.onclick = () => {
+        if (!isCosmeticOwned(type, item.id)){
+          if (!buyCosmetic(type, item.id)){ beep(220,0.1,0.1); return; }
+        }
+        applyCosmetic(type, item.id);
+        beep(660,0.06,0.06);
+        renderStyling();
+        updateHubUI();
+      };
+      opts.appendChild(btn);
+    }
+    return wrap;
+  }
+
+  sections.appendChild(makeSection('ЦВЕТ КУЗОВА', 'paints', PAINTS, cos.paint, p => p.color || spec.colors.main, false));
+  sections.appendChild(makeSection('ЦВЕТ ДИСКОВ', 'rims', RIM_COLORS, cos.rim, r => r.color, false));
+  sections.appendChild(makeSection('НАКЛЕЙКИ', 'decals', DECALS, cos.decal, null, true));
+  sections.appendChild(makeSection('НЕОН', 'neons', NEONS, cos.neon, n => n.color || null, false));
+}
+
+/* ============ КЛАНЫ ============ */
+function renderClans(){
+  document.getElementById('clanMoney').textContent = fmtMoney(save.money);
+  const list = document.getElementById('clanList');
+  list.innerHTML = '';
+
+  for (const clan of CLANS){
+    const mine = save.clan === clan.id;
+    const card = document.createElement('div');
+    card.className = 'clan-card' + (mine ? ' mine' : '');
+
+    const playerScore = save.clanPoints || 0;
+    const members = clan.members.slice();
+    if (mine) members.push({ name:'ВЫ', score:playerScore, you:true });
+    members.sort((a,b) => b.score - a.score);
+
+    const lbHtml = members.map(m =>
+      '<div class="clan-lb-row'+(m.you?' you':'')+'">' +
+        '<span class="lb-name">'+m.name+'</span>' +
+        '<span class="lb-score">'+fmtMoney(m.score)+'</span>' +
+      '</div>'
+    ).join('');
+
+    card.innerHTML =
+      '<div class="clan-head">' +
+        '<span class="clan-tag" style="background:'+clan.color+'26;color:'+clan.color+'">'+clan.tag+'</span>' +
+        '<h3>'+clan.name+'</h3>' +
+      '</div>' +
+      '<div class="clan-bonus">'+clan.bonus+'</div>' +
+      '<div class="clan-leaderboard">'+lbHtml+'</div>' +
+      '<div class="clan-actions">' +
+        (mine
+          ? '<span class="tag current-tag">ВАШ КЛАН</span>'
+          : '<button class="btn-sm buy" data-join="'+clan.id+'">ВСТУПИТЬ</button>') +
+      '</div>';
+    list.appendChild(card);
+  }
+}
+document.getElementById('clanList').addEventListener('click', e => {
+  const btn = e.target.closest('[data-join]');
+  if (btn) joinClan(btn.dataset.join);
+});
+function joinClan(id){
+  if (!CLANS.find(c => c.id === id)) return;
+  save.clan = id;
+  if (!save.clanPoints) save.clanPoints = 0;
+  persist(); beep(880, 0.1, 0.1);
+  renderClans(); updateHubUI();
+}
+
+/* ============ ТЕРРИТОРИЯ ============ */
+function renderTerritory(){
+  document.getElementById('terrMoney').textContent = fmtMoney(save.money);
+
+  // legend
+  const clanCounts = {};
+  for (const d of DISTRICTS){
+    const owner = save.districts[d.id];
+    clanCounts[owner] = (clanCounts[owner] || 0) + 1;
+  }
+  const legend = document.getElementById('terrLegend');
+  let legendHtml = '';
+  if (save.clan){
+    const myClan = CLANS.find(c => c.id === save.clan);
+    if (myClan){
+      legendHtml += '<span class="legend-item"><span class="legend-dot" style="background:'+myClan.color+'"></span>' +
+        myClan.tag + ' (ВАШ): ' + (clanCounts[save.clan]||0) + '/' + DISTRICTS.length + '</span>';
+    }
+  } else {
+    legendHtml += '<span class="legend-item" style="color:#ff5d5d">Вступи в клан, чтобы захватывать территории</span>';
+  }
+  for (const c of CLANS){
+    if (c.id === save.clan) continue;
+    if (!clanCounts[c.id]) continue;
+    legendHtml += '<span class="legend-item"><span class="legend-dot" style="background:'+c.color+'"></span>' +
+      c.tag + ': ' + clanCounts[c.id] + '</span>';
+  }
+  legend.innerHTML = legendHtml;
+
+  // map
+  const map = document.getElementById('cityMap');
+  map.innerHTML = '';
+
+  for (const d of DISTRICTS){
+    const ownerId = save.districts[d.id];
+    const ownerClan = CLANS.find(c => c.id === ownerId);
+    const isMine = ownerId === save.clan;
+    const canAttack = save.clan && !isMine;
+
+    const tile = document.createElement('div');
+    tile.className = 'district-tile' + (isMine ? ' mine' : '');
+    tile.style.borderColor = ownerClan ? ownerClan.color + '99' : 'rgba(120,160,255,.3)';
+    tile.style.background = ownerClan
+      ? 'linear-gradient(135deg, ' + ownerClan.color + '35, ' + ownerClan.color + '10)'
+      : 'rgba(80,100,140,.15)';
+
+    const bonusLabel = d.bonusType === 'power' ? 'МОЩНОСТЬ' : d.bonusType === 'money' ? 'ДЕНЬГИ' : 'СЦЕПЛЕНИЕ';
+    const bonusPct = Math.round(d.bonusVal * 100);
+    const defPips = '●'.repeat(d.defense) + '○'.repeat(3 - d.defense);
+
+    tile.innerHTML =
+      '<div class="d-name">' + d.name + '</div>' +
+      (ownerClan
+        ? '<div class="d-owner" style="background:' + ownerClan.color + '44;color:' + ownerClan.color + '">' + ownerClan.tag + '</div>'
+        : '<div class="d-owner" style="background:rgba(120,120,120,.2);color:#8fa2c9">НЕЙТРАЛ</div>') +
+      '<div class="d-bonus">+' + bonusPct + '% ' + bonusLabel + '</div>' +
+      '<div class="d-defense">' + defPips + '</div>' +
+      (canAttack ? '<div class="d-attack">АТАКА</div>' : (isMine ? '<div class="d-mine">ВАШЕ</div>' : ''));
+
+    if (canAttack){
+      tile.onclick = () => attackDistrict(d.id);
+    }
+    map.appendChild(tile);
+  }
+}
+
+function attackDistrict(districtId){
+  const d = DISTRICTS.find(x => x.id === districtId);
+  if (!d) return;
+  if (!save.clan){ beep(220, 0.1, 0.1); return; }
+  if (save.districts[d.id] === save.clan) return;
+
+  const fee = 300 * d.defense;
+  if (save.money < fee){ beep(220, 0.1, 0.1); return; }
+  save.money -= fee;
+  persist();
+
+  startRace({
+    opponentCar: d.oppCar,
+    difficulty: d.oppDiff,
+    districtAttack: { districtId: d.id }
+  });
+  beep(660, 0.1, 0.1);
+}
+
+/* ============ ТУРНИРЫ ============ */
+function isTournamentUnlocked(t){
+  if (t.requires){
+    const prev = TOURNAMENTS.find(x => x.id === t.requires);
+    if (prev && !save.tournamentCompletions[prev.id]) return false;
+  }
+  const tier = Math.max(0, CARS.findIndex(c => c.id === save.currentCar));
+  return tier >= (t.minTier || 0);
+}
+
+function renderTournaments(){
+  document.getElementById('tournMoney').textContent = fmtMoney(save.money);
+  const list = document.getElementById('tournList');
+  list.innerHTML = '';
+
+  for (const t of TOURNAMENTS){
+    const unlocked = isTournamentUnlocked(t);
+    const completed = save.tournamentCompletions[t.id] || 0;
+    const canAfford = save.money >= t.entry;
+
+    let racesHtml = '';
+    for (let i = 0; i < t.races.length; i++){
+      const r = t.races[i];
+      const oppCar = getCarSpec(r.car);
+      const diff = getDiffCfg(r.diff);
+      racesHtml += '<div class="tourn-race-item">' +
+        '<span class="rc-num">'+(i+1)+'.</span>' +
+        '<span class="rc-car">'+oppCar.name+'</span>' +
+        '<span class="rc-diff" style="background:'+diff.color+'22;color:'+diff.color+'">'+diff.name+'</span>' +
+        '</div>';
+    }
+
+    let buttonHtml = '';
+    if (!unlocked){
+      buttonHtml = '<span class="tag locked-tag">ЗАКРЫТ</span>';
+    } else if (completed > 0){
+      buttonHtml = '<button class="btn-sm gold" data-start-t="'+t.id+'">ПОВТОРИТЬ · $'+fmtMoney(t.entry)+'</button>';
+    } else {
+      buttonHtml = '<button class="btn-sm buy" data-start-t="'+t.id+'" '+(canAfford?'':'disabled')+'>НАЧАТЬ · $'+fmtMoney(t.entry)+'</button>';
+    }
+
+    const card = document.createElement('div');
+    card.className = 'tourn-card' + (unlocked?'':' locked') + (completed>0?' done':'');
+    card.innerHTML =
+      '<h3>'+t.name+' '+(completed>0?'<span class="tag done-tag">'+completed+'x</span>':'')+'</h3>' +
+      '<div class="desc">'+t.desc+'</div>' +
+      '<div class="tourn-races">'+racesHtml+'</div>' +
+      '<div class="tourn-meta">' +
+        '<span>ВЗНОС <b>$'+fmtMoney(t.entry)+'</b></span>' +
+        '<span>ПРИЗ <b class="prize">$'+fmtMoney(t.prize)+'</b></span>' +
+      '</div>' +
+      '<div class="card-foot" style="justify-content:flex-end">'+buttonHtml+'</div>';
+    list.appendChild(card);
+  }
+}
+
+document.getElementById('tournList').addEventListener('click', e => {
+  const btn = e.target.closest('[data-start-t]');
+  if (!btn) return;
+  startTournament(btn.dataset.startT);
+});
+
+function startTournament(id){
+  const t = TOURNAMENTS.find(x => x.id === id);
+  if (!t) return;
+  if (!isTournamentUnlocked(t)) return;
+  if (save.money < t.entry) return;
+  save.money -= t.entry;
+  persist();
+  const tournamentState = { id: t.id, currentRace: 0 };
+  startTournamentRace(tournamentState);
+  beep(660, 0.1, 0.1);
+}
+
+function startTournamentRace(tournamentState){
+  const t = TOURNAMENTS.find(x => x.id === tournamentState.id);
+  if (!t) return;
+  const race = t.races[tournamentState.currentRace];
+  if (!race) return;
+  startRace({
+    opponentCar: race.car,
+    difficulty: race.diff,
+    tournament: tournamentState
+  });
+}
+
+/* ============ ЗАВЕРШЕНИЕ ============ */
+function finishRace(){
+  setPhase('finished');
+  const won = opp.finished ? player.finishTime <= opp.finishTime : true;
+  const perfect = player.perfectCount || 0;
+  const tier = Math.max(0, CARS.findIndex(c => c.id === save.currentCar));
+
+  const baseEarn = won ? (400 + tier * 80 + perfect * 60) : (80 + perfect * 30);
+  const clanBonus = getClanBonus();
+  const terrBonus = getTerritoryBonus();
+  const diffId = (state.lastRaceOpts && state.lastRaceOpts.difficulty) || save.difficulty;
+  const diffCfg = getDiffCfg(diffId);
+
+  let earn = Math.round(baseEarn * diffCfg.rewardMult * clanBonus.money * terrBonus.money);
+  let isBest = false;
+  if (won && (!save.best || player.finishTime < save.best)){
+    save.best = player.finishTime;
+    isBest = true;
+    earn += 200;
+  }
+
+  if (save.clan) save.clanPoints = (save.clanPoints || 0) + (won ? 50 + perfect * 15 : 10);
+
+  // Tournament
+  let tournamentResult = null;
+  if (state.tournament){
+    const t = TOURNAMENTS.find(x => x.id === state.tournament.id);
+    if (t){
+      if (won){
+        state.tournament.currentRace++;
+        if (state.tournament.currentRace >= t.races.length){
+          const prevCount = save.tournamentCompletions[t.id] || 0;
+          const prize = prevCount === 0 ? t.prize : Math.floor(t.prize / 2);
+          earn += prize;
+          save.tournamentCompletions[t.id] = prevCount + 1;
+          tournamentResult = { type:'complete', id:t.id, name:t.name, prize };
+          state.tournament = null;
+        } else {
+          tournamentResult = {
+            type:'advance', id:t.id, name:t.name,
+            currentRace: state.tournament.currentRace,
+            totalRaces: t.races.length
+          };
+        }
+      } else {
+        tournamentResult = {
+          type:'failed', id:t.id, name:t.name,
+          currentRace: state.tournament.currentRace,
+          totalRaces: t.races.length
+        };
+        state.tournament = null;
+      }
+    }
+  }
+
+  // District attack
+  let districtResult = null;
+  if (state.districtAttack){
+    const d = DISTRICTS.find(x => x.id === state.districtAttack.districtId);
+    if (d){
+      if (won){
+        const prevOwnerId = save.districts[d.id];
+        const prevOwner = CLANS.find(c => c.id === prevOwnerId);
+        save.districts[d.id] = save.clan;
+        const captureBonus = 500 * d.defense;
+        earn += captureBonus;
+        districtResult = { district: d, success: true, prevOwner, captureBonus };
+      } else {
+        districtResult = { district: d, success: false };
+      }
+    }
+    state.districtAttack = null;
+  }
+
+  save.money += earn;
+  persist();
+
+  state.lastResult = {
+    won, pTime:player.finishTime,
+    oTime:opp.finished ? opp.finishTime : null,
+    perfect, earn, isBest,
+    diff: diffId,
+    clanBonus: clanBonus.money,
+    terrBonus: terrBonus.money,
+    tournamentResult, districtResult
+  };
+  showResults();
+}
+
+function showResults(){
+  const r = state.lastResult;
+  const title = document.getElementById('resTitle');
+  const sub = document.getElementById('resSub');
+  const body = document.getElementById('resBody');
+  const tournBlock = document.getElementById('resTournBlock');
+  const resActions = document.getElementById('resActions');
+  const resEarn = document.getElementById('resEarn');
+
+  if (r.districtResult){
+    if (r.districtResult.success){
+      title.textContent = 'ТЕРРИТОРИЯ ЗАХВАЧЕНА';
+      title.style.color = '#4dffa0';
+    } else {
+      title.textContent = 'ЗАХВАТ ПРОВАЛЕН';
+      title.style.color = '#ff5d5d';
+    }
+  } else if (r.tournamentResult && r.tournamentResult.type === 'complete'){
+    title.textContent = 'ТУРНИР ЗАВЕРШЁН';
+    title.style.color = '#ffd166';
+  } else if (r.tournamentResult && r.tournamentResult.type === 'failed'){
+    title.textContent = 'ПОРАЖЕНИЕ';
+    title.style.color = '#ff5d5d';
+  } else if (r.won){
+    title.textContent = 'ПОБЕДА';
+    title.style.color = '#4dffa0';
+  } else {
+    title.textContent = 'ПОРАЖЕНИЕ';
+    title.style.color = '#ff5d5d';
+  }
+
+  const diffCfg = getDiffCfg(r.diff);
+  sub.innerHTML = '1/4 МИЛИ · <span style="color:'+diffCfg.color+'">'+diffCfg.name+'</span>';
+
+  let html = '';
+  html += '<div class="res-row"><span class="lbl">Ваше время</span>' +
+          '<span class="val '+(r.won?'green':'red')+'">'+r.pTime.toFixed(3)+' с</span></div>';
+  html += '<div class="res-row"><span class="lbl">Соперник</span>' +
+          '<span class="val">'+(r.oTime!==null?r.oTime.toFixed(3)+' с':'—')+'</span></div>';
+  html += '<div class="res-row"><span class="lbl">Идеальных переключений</span>' +
+          '<span class="val gold">'+r.perfect+' / 4</span></div>';
+  if (r.isBest)
+    html += '<div class="res-row"><span class="lbl">Новый рекорд!</span>' +
+            '<span class="val green">+$200</span></div>';
+  const totalMult = (r.clanBonus||1) * (r.terrBonus||1);
+  if (totalMult > 1.01)
+    html += '<div class="res-row"><span class="lbl">Бонусы (клан+терр.)</span>' +
+            '<span class="val green">+'+Math.round((totalMult-1)*100)+'%</span></div>';
+  body.innerHTML = html;
+
+  // Tourn / District blocks
+  tournBlock.innerHTML = '';
+  if (r.tournamentResult){
+    const tr = r.tournamentResult;
+    if (tr.type === 'advance'){
+      tournBlock.innerHTML =
+        '<div class="tourn-result">' +
+          '<div class="tourn-name">'+tr.name+'</div>' +
+          '<div class="tourn-status">РАУНД '+tr.currentRace+' / '+tr.totalRaces+' ПРОЙДЕН</div>' +
+          '<div class="tourn-sub">Следующий соперник уже ждёт</div>' +
+        '</div>';
+    } else if (tr.type === 'complete'){
+      tournBlock.innerHTML =
+        '<div class="tourn-result">' +
+          '<div class="tourn-name">'+tr.name+'</div>' +
+          '<div class="tourn-status" style="color:#4dffa0">ПРИЗОВОЙ ФОНД ПРИСУЖДЁН</div>' +
+          '<div class="tourn-sub" style="color:#ffd166">+$'+fmtMoney(tr.prize)+' сверх заезда</div>' +
+        '</div>';
+    } else if (tr.type === 'failed'){
+      tournBlock.innerHTML =
+        '<div class="tourn-result">' +
+          '<div class="tourn-name">'+tr.name+'</div>' +
+          '<div class="tourn-status" style="color:#ff5d5d">ТУРНИР ПРОВАЛЕН</div>' +
+          '<div class="tourn-sub">Взнос не возвращается. Попробуй ещё раз!</div>' +
+        '</div>';
+    }
+  }
+  if (r.districtResult){
+    const dr = r.districtResult;
+    if (dr.success){
+      tournBlock.innerHTML =
+        '<div class="district-result success">' +
+          '<div class="dr-name">' + dr.district.name + '</div>' +
+          '<div class="dr-title">ТЕРРИТОРИЯ ПОД ВАШИМ КОНТРОЛЕМ</div>' +
+          '<div class="dr-sub">+' + Math.round(dr.district.bonusVal*100) + '% ' +
+            (dr.district.bonusType === 'power' ? 'мощности' : dr.district.bonusType === 'money' ? 'денег' : 'сцепления') +
+            ' · +$' + fmtMoney(dr.captureBonus) + ' за захват</div>' +
+        '</div>';
+    } else {
+      tournBlock.innerHTML =
+        '<div class="district-result fail">' +
+          '<div class="dr-name">' + dr.district.name + '</div>' +
+          '<div class="dr-title">ЗАХВАТ ПРОВАЛЕН</div>' +
+          '<div class="dr-sub">Территория осталась у ' + (dr.prevOwner || 'врагов') + '. Попробуй снова!</div>' +
+        '</div>';
+    }
+  }
+  resEarn.textContent = '+$' + fmtMoney(r.earn);
+
+  resActions.innerHTML = '';
+  if (r.tournamentResult && r.tournamentResult.type === 'advance'){
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'СЛЕДУЮЩИЙ ЗАЕЗД';
+    nextBtn.onclick = () => { startTournamentRace(state.tournament || { id: r.tournamentResult.id, currentRace: r.tournamentResult.currentRace }); };
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'ghost';
+    leaveBtn.textContent = 'СДАТЬСЯ';
+    leaveBtn.onclick = () => { state.tournament = null; showHub(); };
+    resActions.appendChild(nextBtn);
+    resActions.appendChild(leaveBtn);
+  } else if (r.districtResult || (r.tournamentResult && (r.tournamentResult.type === 'complete' || r.tournamentResult.type === 'failed'))){
+    const hBtn = document.createElement('button');
+    hBtn.textContent = 'В ГАРАЖ';
+    hBtn.onclick = () => { state.tournament = null; showHub(); };
+    resActions.appendChild(hBtn);
+  } else {
+    const againBtn = document.createElement('button');
+    againBtn.textContent = 'ЕЩЁ РАЗ';
+    againBtn.onclick = () => startRace();
+    const garageBtn = document.createElement('button');
+    garageBtn.className = 'ghost';
+    garageBtn.textContent = 'В ГАРАЖ';
+    garageBtn.onclick = showHub;
+    resActions.appendChild(againBtn);
+    resActions.appendChild(garageBtn);
+  }
+
+  elResults.classList.remove('hidden');
+}
+
+/* ============ AI + UPDATE ============ */
+function updateAI(dt){
+  if (opp.shiftTimer <= 0 && opp.gear < GEARS.length - 1){
+    const rc = opp.speed * GEARS[opp.gear] * RPM_K;
+    if (rc >= opp.shiftPoint){
+      opp.gear++; opp.shiftTimer = 0.14;
+      opp.shiftPoint = 7200 + Math.random() * 420;
+    }
+  }
+  stepCar(opp, dt, true);
+}
+function update(dt){
+  if (state.phase === 'countdown'){
+    const prev = Math.ceil(state.countdown);
+    state.countdown -= dt;
+    const now = Math.ceil(state.countdown);
+    if (now !== prev && now >= 1) beep(440, 0.12, 0.09);
+    if (state.countdown <= 0){
+      state.phase = 'racing'; state.raceTime = 0;
+      beep(880, 0.3, 0.14);
+    }
+    return;
+  }
+  if (state.phase !== 'racing') return;
+  if (!player || !opp) return;
+  state.raceTime += dt;
+  stepCar(player, dt, input.gas);
+  updateAI(dt);
+  if (!player.finished && player.dist >= QUARTER){
+    player.finished = true; player.finishTime = state.raceTime;
+  }
+  if (!opp.finished && opp.dist >= QUARTER){
+    opp.finished = true; opp.finishTime = state.raceTime;
+  }
+  if (player.finished) state.afterPlayer += dt;
+  if (player.finished && (opp.finished || state.afterPlayer > 4)) finishRace();
+}
+
+/* ============ КОЛЕСО ============ */
+function drawDetailedWheel(g, x, y, r, angle, level, rimColor){
+  g.save(); g.translate(x, y);
+  const tireGrad = g.createRadialGradient(-r*0.2, -r*0.25, r*0.25, 0, 0, r);
+  tireGrad.addColorStop(0,'#2a2a32'); tireGrad.addColorStop(0.65,'#121218');
+  tireGrad.addColorStop(1,'#050508');
+  g.fillStyle = tireGrad;
+  g.beginPath(); g.arc(0,0,r,0,Math.PI*2); g.fill();
+  g.strokeStyle = 'rgba(50,50,60,.55)'; g.lineWidth = 0.6;
+  for (let i = 0; i < 22; i++){
+    const a = i*Math.PI/11 + angle*0.4;
+    g.beginPath();
+    g.moveTo(Math.cos(a)*r*0.87, Math.sin(a)*r*0.87);
+    g.lineTo(Math.cos(a)*r*0.965, Math.sin(a)*r*0.965);
+    g.stroke();
+  }
+  g.strokeStyle = 'rgba(85,85,95,.4)'; g.lineWidth = 0.5;
+  g.beginPath(); g.arc(0,0,r*0.83,0,Math.PI*2); g.stroke();
+  g.rotate(angle);
+  const rimR = r * (0.66 + level * 0.012);
+  const rimGrad = g.createRadialGradient(-rimR*0.2, -rimR*0.3, rimR*0.1, 0,0,rimR);
+  rimGrad.addColorStop(0, '#f2f6ff');
+  rimGrad.addColorStop(0.4, rimColor);
+  rimGrad.addColorStop(1, darken(rimColor, 0.55));
+  g.fillStyle = rimGrad;
+  g.beginPath(); g.arc(0,0,rimR,0,Math.PI*2); g.fill();
+  g.strokeStyle = 'rgba(30,30,40,.8)'; g.lineWidth = 1;
+  g.beginPath(); g.arc(0,0,rimR,0,Math.PI*2); g.stroke();
+  const spokeCount = 5 + Math.floor(level / 2) * 2;
+  for (let i = 0; i < spokeCount; i++){
+    const a = i*Math.PI*2/spokeCount;
+    g.save(); g.rotate(a);
+    const sg = g.createLinearGradient(0, -rimR*0.15, 0, -rimR*0.85);
+    sg.addColorStop(0, darken(rimColor, 0.35));
+    sg.addColorStop(0.5, rimColor);
+    sg.addColorStop(1, lighten(rimColor, 0.35));
+    g.fillStyle = sg;
+    if (level >= 3){
+      g.beginPath();
+      g.moveTo(-3,-rimR*0.16); g.lineTo(-2.2,-rimR*0.82);
+      g.lineTo(-0.8,-rimR*0.82); g.lineTo(-0.6,-rimR*0.16);
+      g.closePath(); g.fill();
+      g.beginPath();
+      g.moveTo(3,-rimR*0.16); g.lineTo(2.2,-rimR*0.82);
+      g.lineTo(0.8,-rimR*0.82); g.lineTo(0.6,-rimR*0.16);
+      g.closePath(); g.fill();
+    } else {
+      g.beginPath();
+      g.moveTo(-2.5,-rimR*0.16); g.lineTo(-1.6,-rimR*0.82);
+      g.lineTo(1.6,-rimR*0.82); g.lineTo(2.5,-rimR*0.16);
+      g.closePath(); g.fill();
+    }
+    g.restore();
+  }
+  g.fillStyle = '#1a2030';
+  g.beginPath(); g.arc(0,0,rimR*0.28,0,Math.PI*2); g.fill();
+  for (let i = 0; i < 5; i++){
+    const a = i*Math.PI*2/5;
+    g.fillStyle = '#c8d0e0';
+    g.beginPath();
+    g.arc(Math.cos(a)*rimR*0.2, Math.sin(a)*rimR*0.2, rimR*0.035, 0, Math.PI*2);
+    g.fill();
+  }
+  const capGrad = g.createRadialGradient(-rimR*0.04, -rimR*0.05, 0, 0,0,rimR*0.13);
+  capGrad.addColorStop(0,'#ffffff'); capGrad.addColorStop(1, rimColor);
+  g.fillStyle = capGrad;
+  g.beginPath(); g.arc(0,0,rimR*0.13,0,Math.PI*2); g.fill();
+  g.restore();
+}
+
+/* ============ ДЕКАЛИ ============ */
+function drawDecal(g, decal, colors){
+  if (decal === 'stripes'){
+    g.fillStyle = 'rgba(255,255,255,.92)';
+    g.fillRect(-62, -32, 130, 4);
+    g.fillRect(-62, -26, 130, 4);
+  } else if (decal === 'checker'){
+    for (let i = 0; i < 13; i++){
+      g.fillStyle = i % 2 ? '#f8f8f8' : '#111';
+      g.fillRect(-62 + i*10, -34, 10, 7);
+    }
+  } else if (decal === 'sponsor'){
+    g.fillStyle = 'rgba(255,255,255,.92)';
+    g.fillRect(-42, -32, 22, 8);
+    g.fillRect(-14, -32, 18, 8);
+    g.fillRect(12, -32, 26, 8);
+    g.fillStyle = '#111';
+    g.font = 'bold 5px sans-serif';
+    g.textAlign = 'center';
+    g.fillText('TURBO', -31, -25);
+    g.fillText('RACE', -5, -25);
+    g.fillText('DRAG', 25, -25);
+  } else if (decal === 'flames'){
+    const grd = g.createLinearGradient(0, -50, 65, -20);
+    grd.addColorStop(0, 'rgba(255,180,0,.85)');
+    grd.addColorStop(1, 'rgba(255,60,0,.9)');
+    g.fillStyle = grd;
+    for (let i = 0; i < 5; i++){
+      g.beginPath();
+      g.moveTo(15 + i*2, -48 + i*4);
+      g.quadraticCurveTo(40 + i*3, -54 + i*3, 60, -46 + i*4);
+      g.quadraticCurveTo(45 + i*3, -42 + i*3, 15 + i*2, -44 + i*4);
+      g.closePath();
+      g.fill();
+    }
+  } else if (decal === 'tribal'){
+    g.strokeStyle = 'rgba(0,0,0,.82)';
+    g.lineWidth = 2.2;
+    g.lineCap = 'round';
+    for (let i = 0; i < 4; i++){
+      g.beginPath();
+      g.moveTo(-52 + i*26, -44);
+      g.quadraticCurveTo(-42 + i*26, -32, -52 + i*26, -20);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(-48 + i*26, -44);
+      g.quadraticCurveTo(-40 + i*26, -34, -48 + i*26, -24);
+      g.stroke();
+    }
+  }
+}
+
+/* ============ МАШИНА ============ */
+function drawCar(g, x, y, s, wheelAngle, colors, boost, flash, upg, clanTag, cosmetic){
+  const u = upg || ZERO_UPG;
+  const cos = cosmetic || { paint:'stock', rim:'silver', decal:'none', neon:'none' };
+  const eLvl = u.engine || 0;
+  const tLvl = u.turbo  || 0;
+  const tiLvl = u.tires || 0;
+  const wLvl = u.weight || 0;
+  const rideDrop = wLvl * 1.35;
+
+  // Compute effective colors from cosmetic
+  let effColors = colors;
+  if (cos.paint && cos.paint !== 'stock'){
+    const paintOpt = PAINTS.find(p => p.id === cos.paint);
+    if (paintOpt && paintOpt.color) effColors = deriveColors(paintOpt.color, colors);
+  }
+  let rimColor = effColors.rim;
+  if (cos.rim && cos.rim !== 'silver'){
+    const rimOpt = RIM_COLORS.find(r => r.id === cos.rim);
+    if (rimOpt) rimColor = rimOpt.color;
+  }
+  const neonOpt = cos.neon && cos.neon !== 'none' ? NEONS.find(n => n.id === cos.neon) : null;
+
+  g.save();
+  g.translate(x, y);
+  g.scale(s, s);
+
+  // Neon glow
+  if (neonOpt && neonOpt.color){
+    const nc = neonOpt.color;
+    const gl = g.createRadialGradient(0, -5, 5, 0, -5, 110);
+    gl.addColorStop(0, nc + 'aa');
+    gl.addColorStop(0.55, nc + '44');
+    gl.addColorStop(1, nc + '00');
+    g.fillStyle = gl;
+    g.beginPath(); g.ellipse(0, -2, 95, 22, 0, 0, Math.PI*2); g.fill();
+  }
+
+  // Shadow
+  const shadowGrad = g.createRadialGradient(0,5,12,0,5,100);
+  shadowGrad.addColorStop(0,'rgba(0,0,0,.55)');
+  shadowGrad.addColorStop(0.6,'rgba(0,0,0,.2)');
+  shadowGrad.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle = shadowGrad;
+  g.beginPath(); g.ellipse(0,5,100,12,0,0,Math.PI*2); g.fill();
+
+  const wheelR = 15 + tiLvl * 0.65;
+  const wheelY = -wheelR;
+  drawDetailedWheel(g, -38, wheelY, wheelR, wheelAngle, tiLvl, rimColor);
+  drawDetailedWheel(g,  40, wheelY, wheelR, wheelAngle, tiLvl, rimColor);
+
+  g.translate(0, rideDrop);
+
+  // Exhaust flames
+  const pipeCount = 1 + Math.floor(eLvl / 2);
+  if (boost > 0){
+    const fl = 0.6 + Math.random() * 0.5;
+    for (let p = 0; p < pipeCount; p++){
+      const py = -22 + p * 4;
+      const flameLen = (40 + eLvl * 4) * fl;
+      const flameG = g.createLinearGradient(-67, py, -67 - flameLen, py);
+      flameG.addColorStop(0,'rgba(255,250,200,.95)');
+      flameG.addColorStop(0.25,'rgba(255,200,60,.9)');
+      flameG.addColorStop(0.55,'rgba(255,100,20,.55)');
+      flameG.addColorStop(1,'rgba(255,40,0,0)');
+      g.fillStyle = flameG;
+      g.beginPath();
+      g.moveTo(-67, py-2.5);
+      g.quadraticCurveTo(-67-flameLen*0.5, py-5-Math.random()*3,
+                         -67-flameLen, py+(Math.random()-0.5)*4);
+      g.quadraticCurveTo(-67-flameLen*0.5, py+2+Math.random()*3,
+                         -67, py+2.5);
+      g.closePath(); g.fill();
+    }
+  }
+
+  // Body
+  const bodyPath = new Path2D();
+  bodyPath.moveTo(-68,-16);
+  bodyPath.lineTo(-68,-33);
+  bodyPath.bezierCurveTo(-68,-38,-63,-40,-56,-40);
+  bodyPath.lineTo(-36,-40);
+  bodyPath.lineTo(-17,-58);
+  bodyPath.bezierCurveTo(-15,-59,-12,-59,-10,-58);
+  bodyPath.lineTo(12,-58);
+  bodyPath.bezierCurveTo(14,-59,17,-59,19,-58);
+  bodyPath.lineTo(36,-40);
+  bodyPath.lineTo(57,-38);
+  bodyPath.bezierCurveTo(64,-37,68,-32,68,-26);
+  bodyPath.lineTo(68,-16);
+  bodyPath.closePath();
+
+  const bodyGrad = g.createLinearGradient(0,-60,0,-10);
+  bodyGrad.addColorStop(0, effColors.top);
+  bodyGrad.addColorStop(0.35, effColors.main);
+  bodyGrad.addColorStop(0.85, effColors.dark);
+  bodyGrad.addColorStop(1, '#050508');
+  g.fillStyle = bodyGrad; g.fill(bodyPath);
+  g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.5; g.stroke(bodyPath);
+
+  // Decals
+  if (cos.decal && cos.decal !== 'none'){
+    g.save();
+    g.clip(bodyPath);
+    drawDecal(g, cos.decal, effColors);
+    g.restore();
+  }
+
+  // Carbon hood / roof
+  if (wLvl >= 2){
+    g.save();
+    const hp = new Path2D();
+    hp.moveTo(-17,-58); hp.lineTo(-36,-40); hp.lineTo(36,-40); hp.lineTo(17,-58);
+    hp.closePath(); g.clip(hp);
+    g.fillStyle = 'rgba(20,20,26,.55)'; g.fillRect(-40,-60,80,25);
+    g.strokeStyle = 'rgba(95,95,110,.32)'; g.lineWidth = 0.5;
+    for (let cy=-58; cy<-38; cy+=2.5)
+      for (let cx=-40; cx<40; cx+=5){
+        g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+2.5,cy+2.5); g.stroke();
+      }
+    g.restore();
+  }
+  if (wLvl >= 4){
+    g.save();
+    const rp = new Path2D();
+    rp.moveTo(-17,-58); rp.lineTo(17,-58); rp.lineTo(30,-42); rp.lineTo(-32,-42);
+    rp.closePath(); g.clip(rp);
+    g.fillStyle = 'rgba(20,20,26,.6)'; g.fillRect(-40,-60,80,25);
+    g.strokeStyle = 'rgba(95,95,110,.3)'; g.lineWidth = 0.5;
+    for (let cy=-58; cy<-40; cy+=2.5)
+      for (let cx=-40; cx<40; cx+=5){
+        g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+2.5,cy+2.5); g.stroke();
+      }
+    g.restore();
+  }
+
+  // Glass
+  const glassPath = new Path2D();
+  glassPath.moveTo(-30,-42); glassPath.lineTo(-15,-55);
+  glassPath.lineTo(14,-55); glassPath.lineTo(30,-42);
+  glassPath.closePath();
+  const glassGrad = g.createLinearGradient(0,-56,0,-38);
+  glassGrad.addColorStop(0,'rgba(200,230,255,.78)');
+  glassGrad.addColorStop(0.4,'rgba(100,160,240,.85)');
+  glassGrad.addColorStop(1,'rgba(15,30,60,.95)');
+  g.fillStyle = glassGrad; g.fill(glassPath);
+  g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(0,-55); g.lineTo(0,-42); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(-24,-46); g.lineTo(-14,-54); g.stroke();
+
+  // Door line
+  g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0,-40); g.lineTo(0,-18); g.stroke();
+  g.fillStyle = 'rgba(200,210,230,.75)'; g.fillRect(4,-33,8,2);
+
+  // Mirror
+  g.fillStyle = effColors.dark;
+  g.beginPath(); g.moveTo(-30,-42); g.lineTo(-38,-46); g.lineTo(-38,-41);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.8; g.stroke();
+
+  // Headlight
+  const headGrad = g.createRadialGradient(63,-30,1,63,-30,10);
+  headGrad.addColorStop(0,'#fffbe6'); headGrad.addColorStop(0.4,'#ffe066');
+  headGrad.addColorStop(1,'rgba(255,200,80,0)');
+  g.fillStyle = headGrad;
+  g.beginPath();
+  g.moveTo(57,-31); g.lineTo(68,-30); g.lineTo(68,-24); g.lineTo(56,-25);
+  g.closePath(); g.fill();
+  g.fillStyle = '#fff5c0';
+  g.beginPath();
+  g.moveTo(61,-29); g.lineTo(66,-28.5); g.lineTo(66,-26); g.lineTo(60,-26);
+  g.closePath(); g.fill();
+
+  // Taillight
+  g.fillStyle = 'rgba(255,60,60,.9)';
+  g.beginPath();
+  g.moveTo(-68,-27); g.lineTo(-62,-27); g.lineTo(-62,-20); g.lineTo(-68,-22);
+  g.closePath(); g.fill();
+  g.save(); g.shadowColor = '#ff3030'; g.shadowBlur = 10; g.fill(); g.restore();
+
+  // Turbo hood scoop
+  if (tLvl >= 1){
+    const scoopH = 2.5 + tLvl * 0.9;
+    const scoopW = 10 + tLvl * 1.2;
+    const sx = 5, sy = -58;
+    g.fillStyle = effColors.dark;
+    g.beginPath();
+    g.moveTo(sx, sy); g.lineTo(sx+scoopW, sy);
+    g.lineTo(sx+scoopW+2, sy-scoopH); g.lineTo(sx-2, sy-scoopH);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1; g.stroke();
+    g.fillStyle = 'rgba(15,15,20,.9)'; g.fillRect(sx+1, sy-1.5, scoopW-2, 1.5);
+    g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(sx-2, sy-scoopH+0.5); g.lineTo(sx+scoopW+2, sy-scoopH+0.5);
+    g.stroke();
+  }
+  if (tLvl >= 3){
+    g.fillStyle = 'rgba(10,10,15,.9)';
+    g.beginPath();
+    g.moveTo(57,-22); g.lineTo(67,-21); g.lineTo(67,-17); g.lineTo(57,-18);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(160,190,230,.7)'; g.lineWidth = 0.4;
+    for (let i = 0; i < 4; i++){
+      g.beginPath(); g.moveTo(58,-21+i*0.8); g.lineTo(66,-20.5+i*0.8); g.stroke();
+    }
+  }
+
+  // Spoiler
+  const spoilerLvl = Math.min(5, Math.floor((wLvl + eLvl) / 2));
+  if (spoilerLvl > 0){
+    const spH = 3 + spoilerLvl * 1.2;
+    const spW = 16 + spoilerLvl * 2;
+    const spY = -40 - spH;
+    const wingHalf = spW / 2;
+    g.fillStyle = effColors.dark;
+    g.fillRect(-62,-42,2.5,spH-2); g.fillRect(-54,-42,2.5,spH-2);
+    const wg = g.createLinearGradient(0, spY, 0, spY+5);
+    wg.addColorStop(0, effColors.top); wg.addColorStop(1, effColors.dark);
+    g.fillStyle = wg;
+    g.beginPath();
+    g.moveTo(-58-wingHalf, spY+2); g.lineTo(-58+wingHalf, spY+2);
+    g.lineTo(-56+wingHalf, spY-3); g.lineTo(-60-wingHalf, spY-3);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(-60-wingHalf, spY-2.5); g.lineTo(-56+wingHalf, spY-2.5); g.stroke();
+  }
+
+  // Side skirt
+  if (wLvl >= 1){
+    g.fillStyle = effColors.dark;
+    g.fillRect(-30,-14,60,2+wLvl*0.4);
+    g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 0.6;
+    g.beginPath(); g.moveTo(-30,-14); g.lineTo(30,-14); g.stroke();
+  }
+
+  // Exhaust pipes
+  for (let i = 0; i < pipeCount; i++){
+    const py = -22 + i * 4;
+    g.fillStyle = '#666';
+    g.beginPath(); g.ellipse(-67, py, 2, 2.5, 0, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#111';
+    g.beginPath(); g.ellipse(-67, py, 1.2, 1.5, 0, 0, Math.PI*2); g.fill();
+  }
+
+  // Highlights
+  g.strokeStyle = 'rgba(255,255,255,.38)'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(-56,-40); g.lineTo(-36,-40); g.stroke();
+  g.beginPath(); g.moveTo(36,-40); g.lineTo(56,-38); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(-60,-22); g.lineTo(62,-22); g.stroke();
+
+  // Clan tag
+  if (clanTag){
+    g.font = 'bold 7px monospace';
+    g.textAlign = 'center';
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    g.fillText(clanTag, 15, -25);
+    g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.4;
+    g.strokeText(clanTag, 15, -25);
+  }
+
+  // Perfect shift flash
+  if (flash > 0){
+    g.globalAlpha = flash;
+    g.strokeStyle = '#4dffa0'; g.lineWidth = 3;
+    g.shadowColor = '#4dffa0'; g.shadowBlur = 28;
+    g.beginPath(); g.ellipse(0,-30,84,44,0,0,Math.PI*2); g.stroke();
+    g.shadowBlur = 0; g.globalAlpha = 1;
+  }
+
+  g.restore();
+}
+
+/* ============ ХАБ — ШОУРУМ ============ */
+const stars = [];
+for (let i = 0; i < 160; i++)
+  stars.push({ x:Math.random(), y:Math.random(), r:Math.random()*1.4+0.3, a:Math.random()*0.7+0.2 });
+const buildings = [];
+const BUILDING_SPAN = 7200;
+for (let i = 0; i < 80; i++)
+  buildings.push({ x:i*90 + Math.random()*50, w:34+Math.random()*56,
+                   h:30+Math.random()*150, lit:Math.random() > 0.35 });
+
+function hubCarTransform(){
+  const s = Math.min(W/280, H/260);
+  const floorY = H * 0.60;
+  return { s, floorY, x: W/2 };
+}
+function updateHubParticles(dt){
+  const { s, floorY, x } = hubCarTransform();
+  const bob = Math.sin(performance.now()*0.0015) * 1.8;
+  for (let i = hubParticles.length-1; i >= 0; i--){
+    const p = hubParticles[i];
+    p.life -= dt;
+    if (p.life <= 0){ hubParticles.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.r += dt * 12; p.vy -= dt * 4;
+  }
+  if (Math.random() < 0.55){
+    hubParticles.push({
+      x: x - 67*s + (Math.random()-0.5)*10,
+      y: floorY + bob - 18*s + (Math.random()-0.5)*6,
+      vx: -14 - Math.random()*22, vy: -8 - Math.random()*14,
+      r: 2.5 + Math.random()*4, life: 1.0 + Math.random()*0.9, maxLife: 1.9
+    });
+  }
+}
+function drawHub(t){
+  const spec = getCarSpec(save.currentCar);
+  const upg = save.upgrades[save.currentCar] || ZERO_UPG;
+  const cos = getCosmeticFor(save.currentCar);
+  const { s, floorY, x } = hubCarTransform();
+  const bob = Math.sin(t*0.0015) * 1.8;
+  const clanTag = save.clan ? (CLANS.find(c=>c.id===save.clan)||{}).tag : null;
+
+  const bg = ctx.createRadialGradient(W/2, H*0.42, 40, W/2, H*0.42, Math.max(W,H)*0.9);
+  bg.addColorStop(0,'#1c1838'); bg.addColorStop(0.5,'#0c0a1c'); bg.addColorStop(1,'#04040a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  for (const st of stars){
+    ctx.globalAlpha = st.a * (0.5 + 0.5*Math.sin(t*0.001 + st.x*30));
+    ctx.fillStyle = '#dfe9ff';
+    ctx.fillRect(st.x*W, st.y*floorY*0.8, st.r, st.r);
+  }
+  ctx.globalAlpha = 1;
+
+  for (const lx of [W*0.2, W*0.8]){
+    const lg = ctx.createLinearGradient(lx,0,lx,floorY);
+    lg.addColorStop(0,'rgba(120,170,255,.16)'); lg.addColorStop(1,'rgba(120,170,255,0)');
+    ctx.fillStyle = lg;
+    ctx.beginPath();
+    ctx.moveTo(lx-26,0); ctx.lineTo(lx+26,0);
+    ctx.lineTo(lx+150,floorY); ctx.lineTo(lx-150,floorY);
+    ctx.closePath(); ctx.fill();
+  }
+
+  const fg = ctx.createLinearGradient(0,floorY,0,H);
+  fg.addColorStop(0,'#10122a'); fg.addColorStop(1,'#05060e');
+  ctx.fillStyle = fg; ctx.fillRect(0,floorY,W,H-floorY);
+
+  ctx.strokeStyle = 'rgba(90,130,220,.13)'; ctx.lineWidth = 1;
+  for (let i = -12; i <= 12; i++){
+    ctx.beginPath(); ctx.moveTo(W/2 + i*46, floorY); ctx.lineTo(W/2 + i*300, H); ctx.stroke();
+  }
+  for (let i = 1; i <= 9; i++){
+    const yy = floorY + (H-floorY)*Math.pow(i/9,2);
+    ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke();
+  }
+
+  const pulse = 0.5 + 0.5*Math.sin(t*0.002);
+  const glowR = Math.min(W*0.5, 440);
+  const rg = ctx.createRadialGradient(W/2, floorY, 8, W/2, floorY, glowR);
+  rg.addColorStop(0, 'rgba(90,140,255,' + (0.17+pulse*0.1) + ')');
+  rg.addColorStop(1, 'rgba(90,140,255,0)');
+  ctx.fillStyle = rg;
+  ctx.beginPath(); ctx.ellipse(W/2, floorY, glowR, glowR*0.22, 0, 0, Math.PI*2); ctx.fill();
+
+  ctx.save();
+  ctx.translate(W/2, floorY);
+  ctx.rotate(t * 0.0006);
+  ctx.strokeStyle = 'rgba(120,170,255,.3)'; ctx.lineWidth = 2;
+  ctx.setLineDash([16,24]);
+  ctx.beginPath(); ctx.ellipse(0,0,165*s,34*s,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  const fog = ctx.createLinearGradient(0, floorY-60, 0, H);
+  fog.addColorStop(0,'rgba(80,110,200,0)');
+  fog.addColorStop(0.4,'rgba(80,110,200,.06)');
+  fog.addColorStop(1,'rgba(80,110,200,.13)');
+  ctx.fillStyle = fog; ctx.fillRect(0, floorY-60, W, H-floorY+60);
+
+  // Reflection
+  ctx.save();
+  ctx.translate(0, floorY*2);
+  ctx.scale(1, -1);
+  ctx.globalAlpha = 0.16;
+  drawCar(ctx, x, floorY, s, 0, spec.colors, 0, 0, upg, clanTag, cos);
+  ctx.restore();
+
+  for (const p of hubParticles){
+    const a = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = a * 0.32;
+    ctx.fillStyle = '#9fb6e8';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  drawCar(ctx, x, floorY+bob, s, 0, spec.colors, 0, 0, upg, clanTag, cos);
+
+  const sweep = (t * 0.00035) % 1;
+  const sx = W/2 - 200*s + sweep * 400*s;
+  const shine = ctx.createLinearGradient(sx-60, 0, sx+60, 0);
+  shine.addColorStop(0,'rgba(255,255,255,0)');
+  shine.addColorStop(0.5,'rgba(255,255,255,.11)');
+  shine.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = shine;
+  ctx.fillRect(sx-60, floorY-90*s, 120, 90*s);
+
+  for (let i = 0; i < 14; i++){
+    const ang = t*0.0004 + i*0.449;
+    const rad = 150*s + Math.sin(t*0.002+i)*20;
+    const px = W/2 + Math.cos(ang)*rad;
+    const py = floorY - 45*s + Math.sin(ang*1.3)*45*s;
+    const a = 0.18 + 0.18*Math.sin(t*0.003+i*2);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#bfe0ff';
+    ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const vg = ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35, W/2,H/2,Math.max(W,H)*0.78);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.62)');
+  ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
+}
+
+/* ============ ФОН ЗАЕЗДА ============ */
+function drawRace(){
+  if (!player || !opp) return;
+  const horizon = H * 0.44;
+  const camDist = player.dist;
+  const pxPerM  = Math.max(6, W / 95);
+  const playerX = W * 0.30;
+
+  let g = ctx.createLinearGradient(0, 0, 0, horizon);
+  g.addColorStop(0,'#04050f');
+  g.addColorStop(0.35,'#0f0c2c');
+  g.addColorStop(0.65,'#2a1545');
+  g.addColorStop(0.88,'#6d2546');
+  g.addColorStop(1,'#a84a54');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,horizon);
+
+  for (const st of stars){
+    ctx.globalAlpha = st.a * (0.5 + 0.5*Math.sin(performance.now()*0.001 + st.x*30));
+    ctx.fillStyle = '#dfe9ff';
+    ctx.fillRect(st.x*W, st.y*horizon*0.8, st.r, st.r);
+  }
+  ctx.globalAlpha = 1;
+
+  const moonX = W*0.78, moonY = horizon*0.28;
+  const mg = ctx.createRadialGradient(moonX,moonY,4,moonX,moonY,130);
+  mg.addColorStop(0,'rgba(255,235,200,.35)'); mg.addColorStop(1,'rgba(255,235,200,0)');
+  ctx.fillStyle = mg; ctx.fillRect(moonX-140, moonY-140, 280, 280);
+  ctx.fillStyle = '#ffeccc';
+  ctx.beginPath(); ctx.arc(moonX,moonY,26,0,Math.PI*2); ctx.fill();
+
+  const off = (camDist * 8) % BUILDING_SPAN;
+  for (const b of buildings){
+    let bx = ((b.x - off) % BUILDING_SPAN + BUILDING_SPAN) % BUILDING_SPAN;
+    if (bx > W + 160) continue;
+    const by = horizon - b.h;
+    ctx.fillStyle = '#0b0c1e'; ctx.fillRect(bx, by, b.w, b.h);
+    if (b.lit){
+      ctx.fillStyle = 'rgba(120,170,255,.22)';
+      for (let wy = by+8; wy < horizon-8; wy += 14)
+        for (let wx = bx+5; wx < bx+b.w-6; wx += 12)
+          if (Math.random() > 0.55) ctx.fillRect(wx, wy, 4, 6);
+    }
+  }
+
+  g = ctx.createLinearGradient(0, horizon, 0, H);
+  g.addColorStop(0,'#15162a'); g.addColorStop(0.35,'#101120'); g.addColorStop(1,'#07080f');
+  ctx.fillStyle = g; ctx.fillRect(0, horizon, W, H-horizon);
+
+  const roadTop = horizon + 10;
+  const roadBot = H - 18;
+
+  const markStep = 25;
+  const markStart = Math.floor(camDist / markStep) * markStep;
+  ctx.font = '11px monospace'; ctx.textAlign = 'center';
+  for (let m = markStart; m < camDist + 260; m += markStep){
+    const mx = playerX + (m - camDist) * pxPerM;
+    if (mx < -60 || mx > W+60) continue;
+    if (m < 0) continue;
+    if (Math.abs(m - Math.round(QUARTER)) < markStep/2) continue;
+    ctx.strokeStyle = 'rgba(120,150,220,.10)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(mx, roadTop); ctx.lineTo(mx, roadBot); ctx.stroke();
+    if (m % 50 === 0 && m > 0){
+      ctx.fillStyle = 'rgba(140,170,220,.35)';
+      ctx.fillText(m + ' м', mx, roadBot + 14);
+    }
+  }
+
+  const blockM = 3;
+  const bStart = Math.floor(camDist / blockM) * blockM;
+  for (let m = bStart; m < camDist + 260; m += blockM){
+    const bx = playerX + (m - camDist) * pxPerM;
+    const wpx = blockM * pxPerM + 1;
+    if (bx > W || bx + wpx < 0) continue;
+    const idx = Math.round(m / blockM);
+    ctx.fillStyle = (idx % 2) ? 'rgba(230,230,240,.55)' : 'rgba(200,45,60,.65)';
+    ctx.fillRect(bx, roadBot+2, wpx, 8);
+  }
+
+  const laneFarY  = roadTop + (roadBot - roadTop) * 0.34;
+  const laneNearY = roadTop + (roadBot - roadTop) * 0.76;
+
+  ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 2;
+  ctx.setLineDash([26,20]);
+  ctx.lineDashOffset = -(camDist * pxPerM) % 46;
+  ctx.beginPath(); ctx.moveTo(0, laneNearY+34); ctx.lineTo(W, laneNearY+34); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, laneFarY+34);  ctx.lineTo(W, laneFarY+34);  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const finX = playerX + (QUARTER - camDist) * pxPerM;
+  if (finX > -120 && finX < W+120){
+    const cell = 14;
+    for (let yy = roadTop; yy < roadBot+12; yy += cell)
+      for (let k = 0; k < 2; k++){
+        ctx.fillStyle = ((Math.floor(yy/cell)+k) % 2) ? '#f2f4ff' : '#1b1c26';
+        ctx.fillRect(finX - cell + k*cell, yy, cell, cell);
+      }
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('ФИНИШ', finX, roadTop - 16);
+  }
+
+  let oppX = playerX + (opp.dist - player.dist) * pxPerM;
+  const margin = 78;
+  let clamped = false;
+  if (oppX < margin){ oppX = margin; clamped = true; }
+  if (oppX > W - margin){ oppX = W - margin; clamped = true; }
+
+  drawCar(ctx, oppX, laneFarY, 0.78, opp.wheelAngle, opp.colors,
+          opp.boostTimer, opp.flashTimer, opp.visualUpg, null, opp.cosmetic);
+  drawCar(ctx, playerX, laneNearY, 1.0, player.wheelAngle, player.colors,
+          player.boostTimer, player.flashTimer, player.visualUpg, player.clanTag, player.cosmetic);
+
+  if (clamped){
+    const ahead = opp.dist > player.dist;
+    const gap = Math.abs(opp.dist - player.dist).toFixed(0);
+    ctx.fillStyle = ahead ? '#4dffa0' : '#ff5d5d';
+    ctx.font = 'bold 15px monospace';
+    ctx.textAlign = ahead ? 'right' : 'left';
+    const tx = ahead ? W - 18 : 18;
+    ctx.fillText((ahead ? '▶ ' : '◀ ') + gap + ' м', tx, laneFarY - 68);
+  }
+
+  drawHUD();
+
+  if (state.phase === 'countdown'){
+    const n = Math.ceil(state.countdown);
+    const frac = state.countdown - Math.floor(state.countdown);
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.75 * frac;
+    ctx.textAlign = 'center';
+    ctx.font = '900 ' + Math.min(180, W*0.24) + 'px sans-serif';
+    ctx.fillStyle = n <= 1 ? '#4dffa0' : '#ffd166';
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 50;
+    ctx.fillText(n > 0 ? n : 'GO!', W/2, H*0.52);
+    ctx.restore();
+  }
+}
+
+/* ============ HUD ============ */
+function drawHUD(){
+  if (!player || !opp) return;
+  const pad = 18, topH = 96;
+  const pg = ctx.createLinearGradient(0,0,0,topH);
+  pg.addColorStop(0,'rgba(8,11,24,.92)');
+  pg.addColorStop(1,'rgba(8,11,24,.55)');
+  ctx.fillStyle = pg; ctx.fillRect(0,0,W,topH);
+
+  const barY = 6, barH = 6, barX = pad, barW = W - pad*2;
+  ctx.fillStyle = 'rgba(255,255,255,.09)';
+  roundRect(barX, barY, barW, barH, 3); ctx.fill();
+  const pf = Math.min(1, player.dist / QUARTER);
+  const of_ = Math.min(1, opp.dist / QUARTER);
+  ctx.fillStyle = 'rgba(230,57,70,.75)';
+  roundRect(barX, barY, Math.max(3, barW*pf), barH, 3); ctx.fill();
+  ctx.fillStyle = '#2f7bff';
+  ctx.beginPath(); ctx.arc(barX + barW*of_, barY+barH/2, 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#ff6b6b';
+  ctx.beginPath(); ctx.arc(barX + barW*pf, barY+barH/2, 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.font = '11px sans-serif'; ctx.fillStyle = '#7d8fb5';
+  ctx.fillText('ВРЕМЯ', pad, 34);
+  ctx.font = 'bold 30px monospace'; ctx.fillStyle = '#fff';
+  ctx.fillText(state.raceTime.toFixed(2), pad, 66);
+
+  ctx.textAlign = 'center';
+  ctx.font = '11px sans-serif'; ctx.fillStyle = '#7d8fb5';
+  ctx.fillText('ДИСТАНЦИЯ', W/2, 34);
+  ctx.font = 'bold 22px monospace';
+  ctx.fillStyle = player.finished ? '#4dffa0' : '#cfe0ff';
+  ctx.fillText(Math.min(player.dist, QUARTER).toFixed(0) + ' / 402 м', W/2, 64);
+
+  ctx.textAlign = 'right';
+  ctx.font = '11px sans-serif'; ctx.fillStyle = '#7d8fb5';
+  ctx.fillText('КМ/Ч', W - pad, 34);
+  ctx.font = 'bold 30px monospace';
+  ctx.fillStyle = player.limiter ? '#ff5d5d' : '#fff';
+  ctx.fillText(Math.round(player.speed * 3.6), W - pad, 66);
+
+  const gx = W - pad - 108;
+  ctx.save();
+  const gearActive = player.shiftTimer > 0;
+  ctx.fillStyle = gearActive ? 'rgba(255,209,102,.18)' : 'rgba(255,255,255,.07)';
+  roundRect(gx-30, 20, 56, 50, 10); ctx.fill();
+  ctx.strokeStyle = gearActive ? 'rgba(255,209,102,.8)' : 'rgba(140,170,230,.35)';
+  ctx.lineWidth = 2;
+  roundRect(gx-30, 20, 56, 50, 10); ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 30px monospace';
+  ctx.fillStyle = gearActive ? '#ffd166' : '#e7eeff';
+  ctx.fillText(String(player.gear+1), gx-2, 58);
+  ctx.restore();
+
+  const tx = pad, ty = 76, tw = W - pad*2, th = 12;
+  ctx.fillStyle = 'rgba(255,255,255,.07)';
+  roundRect(tx, ty, tw, th, th/2); ctx.fill();
+  const pStart = tx + tw * (PERFECT / MAX_RPM);
+  const pEnd   = tx + tw * 0.945;
+  ctx.fillStyle = 'rgba(77,255,160,.22)';
+  ctx.fillRect(pStart, ty, pEnd - pStart, th);
+  ctx.fillStyle = 'rgba(255,70,70,.28)';
+  ctx.fillRect(tx + tw*0.945, ty, tw*0.055, th);
+  const rf = Math.max(0, Math.min(1, player.rpm / MAX_RPM));
+  if (rf > 0.004){
+    const rg = ctx.createLinearGradient(tx,0,tx+tw,0);
+    rg.addColorStop(0,'#2a6cff'); rg.addColorStop(0.45,'#00d4ff');
+    rg.addColorStop(0.78,'#7dffb0'); rg.addColorStop(0.90,'#ffd166'); rg.addColorStop(1,'#ff3b3b');
+    ctx.fillStyle = rg;
+    roundRect(tx, ty, tw*rf, th, th/2); ctx.fill();
+  }
+  if (rf > 0.02){
+    ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(tx + tw*rf, ty+th/2, 4, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Tournament badge
+  if (state.tournament){
+    const t = TOURNAMENTS.find(x => x.id === state.tournament.id);
+    if (t){
+      const label = 'ТУРНИР · ' + (state.tournament.currentRace+1) + '/' + t.races.length;
+      ctx.font = 'bold 12px sans-serif';
+      const tw2 = ctx.measureText(label).width + 22;
+      ctx.fillStyle = 'rgba(255,209,102,.15)';
+      ctx.strokeStyle = 'rgba(255,209,102,.5)';
+      ctx.lineWidth = 1;
+      roundRect(W/2 - tw2/2, 104, tw2, 24, 12);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffd166';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, W/2, 116);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
+  // District attack badge
+  if (state.districtAttack){
+    const d = DISTRICTS.find(x => x.id === state.districtAttack.districtId);
+    if (d){
+      const label = 'БИТВА ЗА: ' + d.name;
+      ctx.font = 'bold 12px sans-serif';
+      const tw2 = ctx.measureText(label).width + 22;
+      ctx.fillStyle = 'rgba(230,57,70,.18)';
+      ctx.strokeStyle = 'rgba(230,57,70,.6)';
+      ctx.lineWidth = 1;
+      roundRect(W/2 - tw2/2, 104, tw2, 24, 12);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ff8a8a';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, W/2, 116);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
+  // Clan tag
+  if (player.clanTag){
+    ctx.save();
+    ctx.font = 'bold 11px monospace';
+    const tagW = ctx.measureText(player.clanTag).width + 16;
+    ctx.fillStyle = (player.clanColor || '#3d7bff') + '33';
+    ctx.strokeStyle = (player.clanColor || '#3d7bff') + '88';
+    ctx.lineWidth = 1;
+    roundRect(W - pad - tagW, 104, tagW, 20, 10);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = player.clanColor || '#cfe0ff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(player.clanTag, W - pad - tagW/2, 114);
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+  }
+}
+function roundRect(x, y, w, h, r){
+  if (w < r*2) r = w/2;
+  if (h < r*2) r = h/2;
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+}
+
+/* ============ CANVAS SETUP ============ */
+const canvasEl = document.getElementById('game');
+const ctx = canvasEl.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvasEl.width = Math.floor(W*DPR); canvasEl.height = Math.floor(H*DPR);
+  canvasEl.style.width = W + 'px'; canvasEl.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ============ ЦИКЛ ============ */
+let lastT = 0;
+function loop(t){
+  if (!lastT) lastT = t;
+  let dt = (t - lastT) / 1000;
+  lastT = t;
+  if (dt > 0.05) dt = 0.05;
+  update(dt);
+  const hubScreens = ['hub','shop','tuning','styling','clans','territory','tournaments'];
+  if (hubScreens.includes(state.phase)){
+    updateHubParticles(dt);
+    drawHub(t);
+  } else {
+    drawRace();
+  }
+  updateEngineSound();
+  requestAnimationFrame(loop);
+}
+
+/* ============ СТАРТ ============ */
+try {
+  loadSave();
+  resetRace({});
+  showHub();
+  requestAnimationFrame(loop);
+} catch(e){
+  errBox.style.display = 'block';
+  errBox.textContent = 'ОШИБКА ИНИЦИАЛИЗАЦИИ: ' + e.message + '\n' + e.stack;
+}
+</script>
+</body>
+</html>
